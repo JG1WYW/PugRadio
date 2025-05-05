@@ -1,0 +1,1999 @@
+diff -ur ../../TMP_LIBS/arduino-audio-tools/CMakeLists.txt arduino-audio-tools/CMakeLists.txt
+--- ../../TMP_LIBS/arduino-audio-tools/CMakeLists.txt	2025-05-05 15:44:00.785897800 +0900
++++ arduino-audio-tools/CMakeLists.txt	2025-01-13 02:00:49.839881700 +0900
+@@ -6,60 +6,60 @@
+     idf_component_register(
+         SRC_DIRS src
+         INCLUDE_DIRS src 
+-        REQUIRES bt esp_common freertos hal log nvs_flash driver
++        REQUIRES bt esp_common freertos hal log nvs_flash driver ESP32-A2DP arduino-libhelix
+     )
+ 
+-    target_compile_options(${COMPONENT_LIB} PUBLIC -DESP32_CMAKE=1 -Wno-error -Wno-format -fpermissive)
+-
+-else()
+-
+-    # set the project name
+-    project(arduino-audio-tools)
+-
+-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+-    set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
+-    add_compile_options(-Wno-deprecated-declarations)
+-
+-    include(FetchContent)
+-
+-    add_library(arduino-audio-tools INTERFACE)
+-
+-    option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
+-    option(ADD_PORTAUDIO "Add Portaudio Library" ON)
+-    option(ADD_ARDUINO_EMULATOR "Add Arduino Emulator Library" ON)
+-
+-
+-    # make include directory available to calling projects 
+-    target_include_directories (arduino-audio-tools INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+-
+-    # installation of all header files
+-    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/" # source directory
+-        DESTINATION "include/arduino-audio-tools" # target directory
+-        FILES_MATCHING # install only matched files
+-        PATTERN "*.h" # select header files
+-    )
+-
+-    if (ADD_PORTAUDIO)
+-        add_compile_options(-DIS_DESKTOP)
+-        # Add Portaduio for desktop build
+-        FetchContent_Declare(portaudio GIT_REPOSITORY "https://github.com/PortAudio/portaudio.git" GIT_TAG v19.7.0 )
+-        FetchContent_GetProperties(portaudio)
+-        if(NOT portaudio_POPULATED)
+-            FetchContent_Populate(portaudio)
+-            add_subdirectory(${portaudio_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/portaudio)
+-        endif()
+-    endif()
+-
+-
+-    if (ADD_ARDUINO_EMULATOR)
+-        # Build with Linux Arduino Emulator
+-        FetchContent_Declare(arduino_emulator GIT_REPOSITORY "https://github.com/pschatzmann/Arduino-Emulator.git" GIT_TAG main )
+-        FetchContent_GetProperties(arduino_emulator)
+-        if(NOT arduino_emulator_POPULATED)
+-            FetchContent_Populate(arduino_emulator)
+-            add_subdirectory(${arduino_emulator_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/emulator)
+-        endif()
+-    endif()
++#    target_compile_options(${COMPONENT_LIB} PUBLIC -DESP32_CMAKE=1 -Wno-error -Wno-format -fpermissive)
+ 
++#else()
++#
++#    # set the project name
++#    project(arduino-audio-tools)
++#
++#    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
++#    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
++#    set(FETCHCONTENT_UPDATES_DISCONNECTED ON)
++#    add_compile_options(-Wno-deprecated-declarations)
++#
++#    include(FetchContent)
++#
++#    add_library(arduino-audio-tools INTERFACE)
++#
++#    option(BUILD_SHARED_LIBS "Build using shared libraries" OFF)
++#    option(ADD_PORTAUDIO "Add Portaudio Library" ON)
++#    option(ADD_ARDUINO_EMULATOR "Add Arduino Emulator Library" ON)
++#
++#
++#    # make include directory available to calling projects 
++#    target_include_directories (arduino-audio-tools INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
++#
++#    # installation of all header files
++#    install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/" # source directory
++#        DESTINATION "include/arduino-audio-tools" # target directory
++#        FILES_MATCHING # install only matched files
++#        PATTERN "*.h" # select header files
++#    )
++#
++#    if (ADD_PORTAUDIO)
++#        add_compile_options(-DIS_DESKTOP)
++#        # Add Portaduio for desktop build
++#        FetchContent_Declare(portaudio GIT_REPOSITORY "https://github.com/PortAudio/portaudio.git" GIT_TAG v19.7.0 )
++#        FetchContent_GetProperties(portaudio)
++#        if(NOT portaudio_POPULATED)
++#            FetchContent_Populate(portaudio)
++#            add_subdirectory(${portaudio_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/portaudio)
++#        endif()
++#    endif()
++#
++#
++#    if (ADD_ARDUINO_EMULATOR)
++#        # Build with Linux Arduino Emulator
++#        FetchContent_Declare(arduino_emulator GIT_REPOSITORY "https://github.com/pschatzmann/Arduino-Emulator.git" GIT_TAG main )
++#        FetchContent_GetProperties(arduino_emulator)
++#        if(NOT arduino_emulator_POPULATED)
++#            FetchContent_Populate(arduino_emulator)
++#            add_subdirectory(${arduino_emulator_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/emulator)
++#        endif()
++#    endif()
++#
+ endif()
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioBasic/Collections/Allocator.h arduino-audio-tools/src/AudioBasic/Collections/Allocator.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioBasic/Collections/Allocator.h	2025-05-05 15:44:02.553599900 +0900
++++ arduino-audio-tools/src/AudioBasic/Collections/Allocator.h	2025-01-13 02:00:52.028606900 +0900
+@@ -63,6 +63,12 @@
+     void* result = do_allocate(size);
+     if (result == nullptr) {
+       LOGE("Allocateation failed for %zu bytes", size);
++#if 1
++      LOGE("(4)");
++      delay(1000);
++      //abort();
++      ESP.restart();
++#endif
+       stop();
+     } else {
+       LOGD("Allocated %zu", size);
+@@ -98,6 +104,12 @@
+     if (result == nullptr) result = malloc(size);
+     if (result == nullptr) {
+       LOGE("allocateation failed for %zu bytes", size);
++#if 1
++      LOGE("(5)");
++      delay(1000);
++      //abort();
++      ESP.restart();
++#endif
+       stop();
+     }
+     // initialize object
+@@ -133,4 +145,4 @@
+ 
+ static AllocatorExt DefaultAllocator;
+ 
+-}  // namespace audio_tools
+\ No newline at end of file
++}  // namespace audio_tools
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioBasic/Str.h arduino-audio-tools/src/AudioBasic/Str.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioBasic/Str.h	2025-05-05 15:44:02.601849600 +0900
++++ arduino-audio-tools/src/AudioBasic/Str.h	2025-04-24 22:13:24.048972800 +0900
+@@ -544,10 +544,16 @@
+   virtual void insert(int pos, const char* str) {
+     if (!isConst()) {
+       int insert_len = strlen(str);
++#if 0
++      int move_len = this->len - pos + 1;
++      grow(this->length() + insert_len);
++#else
+       grow(this->length() + insert_len);
+       int move_len = this->len - pos + 1;
++#endif
+       memmove(chars + pos + insert_len, chars + pos, move_len);
+-      strncpy(chars + pos, str, insert_len);
++      //strncpy(chars + pos, str, insert_len);
++      memcpy(chars + pos, str, insert_len);
+     }
+   }
+ 
+@@ -811,4 +817,4 @@
+   }
+ };
+ 
+-}  // namespace audio_tools
+\ No newline at end of file
++}  // namespace audio_tools
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioCodecs/CodecAACHelix.h arduino-audio-tools/src/AudioCodecs/CodecAACHelix.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioCodecs/CodecAACHelix.h	2025-05-05 15:44:02.629664100 +0900
++++ arduino-audio-tools/src/AudioCodecs/CodecAACHelix.h	2025-01-13 02:00:51.661091900 +0900
+@@ -67,9 +67,11 @@
+             if (aac!=nullptr) delete aac;
+         }
+ 
++#if 0 /* XXX */
+         void setRaw(bool flag){
+             if (aac!=nullptr) aac->setRaw(flag);
+         }
++#endif
+ 
+         /// Defines the output Stream
+         virtual void setOutput(Print &out_stream){
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioCodecs/CodecMP3Helix.h arduino-audio-tools/src/AudioCodecs/CodecMP3Helix.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioCodecs/CodecMP3Helix.h	2025-05-05 15:44:02.679640000 +0900
++++ arduino-audio-tools/src/AudioCodecs/CodecMP3Helix.h	2025-01-13 02:00:51.709228500 +0900
+@@ -19,7 +19,11 @@
+ 
+         MP3DecoderHelix() {
+             TRACED();
++#if 0
++            mp3 = new libhelix::MP3DecoderHelix(libhelix::MP3SelfContaind);
++#else
+             mp3 = new libhelix::MP3DecoderHelix();
++#endif
+             if (mp3!=nullptr){
+                 mp3->setReference(this);
+                 filter.setDecoder(mp3);
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioConfig.h arduino-audio-tools/src/AudioConfig.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioConfig.h	2025-05-05 15:44:02.731803400 +0900
++++ arduino-audio-tools/src/AudioConfig.h	2025-04-21 22:37:45.684711000 +0900
+@@ -91,7 +91,9 @@
+  */
+ 
+ #ifndef DEFAULT_BUFFER_SIZE 
++//#  define DEFAULT_BUFFER_SIZE 512
+ #  define DEFAULT_BUFFER_SIZE 1024
++//#  define DEFAULT_BUFFER_SIZE 2048
+ #endif
+ 
+ #ifndef DEFAULT_SAMPLE_RATE 
+@@ -132,6 +134,7 @@
+ 
+ #ifndef A2DP_BUFFER_COUNT 
+ #  define A2DP_BUFFER_COUNT 30
++//#  define A2DP_BUFFER_COUNT 60
+ #endif
+ 
+ #ifndef CODEC_DELAY_MS 
+@@ -152,7 +155,10 @@
+ 
+ // max size of http processing buffer
+ #ifndef HTTP_MAX_LEN
++//#  define HTTP_MAX_LEN 512
+ #  define HTTP_MAX_LEN 1024
++//#  define HTTP_MAX_LEN 2048
++//#  define HTTP_MAX_LEN 16384
+ #endif
+ 
+ #ifndef USE_RESAMPLE_BUFFER
+@@ -281,12 +287,17 @@
+ #define I2S_AUTO_CLEAR true
+ 
+ // URLStream
+-#define URL_STREAM_CORE 0
+-#define URL_STREAM_PRIORITY 2
++//#define URL_STREAM_CORE 0
++#define URL_STREAM_CORE 1
++//#define URL_STREAM_PRIORITY 2
++#define URL_STREAM_PRIORITY 1
++//#define URL_STREAM_PRIORITY 0
+ #define URL_STREAM_BUFFER_COUNT 10
+ #define STACK_SIZE 30000
+-#define URL_CLIENT_TIMEOUT 60000;
+-#define URL_HANDSHAKE_TIMEOUT 120000
++//#define URL_CLIENT_TIMEOUT 60000
++#define URL_CLIENT_TIMEOUT 20000
++//#define URL_HANDSHAKE_TIMEOUT 120000
++#define URL_HANDSHAKE_TIMEOUT 40000
+ 
+ // // Default LED
+ // #ifndef LED_BUILTIN
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h arduino-audio-tools/src/AudioHttp/HttpHeader.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h	2025-05-05 15:44:02.790447900 +0900
++++ arduino-audio-tools/src/AudioHttp/HttpHeader.h	2025-04-13 00:07:32.099967100 +0900
+@@ -235,10 +235,17 @@
+     char* line = tempBuffer();
+     if (in.connected()) {
+       if (in.available() == 0) {
++#if 0
++        delay(1);
++#else
+         int count = 0;
+         uint32_t timeout = millis() + timeout_ms;
+         while (in.available() == 0) {
++#if 0
++          delay(1);
++#else
+           delay(50);
++#endif
+           count++;
+           if (count == 2) {
+             LOGI("Waiting for data...");
+@@ -251,6 +258,7 @@
+           }
+         }
+         LOGI("Data available: %d", in.available());
++#endif
+       }
+ 
+       readLine(in, line, HTTP_MAX_LEN);
+@@ -507,4 +515,4 @@
+   }
+ };
+ 
+-}  // namespace audio_tools
+\ No newline at end of file
++}  // namespace audio_tools
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h arduino-audio-tools/src/AudioHttp/HttpLineReader.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2025-05-05 15:44:02.794846600 +0900
++++ arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2025-04-13 00:06:34.294720700 +0900
+@@ -20,6 +20,9 @@
+                              bool incl_nl = true) {
+     int result = 0;
+     LOGD("HttpLineReader %s", "readlnInternal");
++#if 0
++    //
++#else
+     // wait for first character
+     for (int w = 0; w < 20 && client.available() == 0; w++) {
+       delay(100);
+@@ -27,9 +30,13 @@
+     // if we do not have any data we stop
+     if (client.available() == 0) {
+       LOGW("HttpLineReader %s", "readlnInternal->no Data");
++#if 0 /* XXX */
++      ESP.restart();
++#endif
+       str[0] = 0;
+       return 0;
+     }
++#endif
+ 
+     // process characters until we find a new line
+     bool is_buffer_owerflow = false;
+@@ -44,6 +51,9 @@
+         result++;
+       } else {
+         is_buffer_owerflow = true;
++#if 1
++        break;
++#endif
+       }
+ 
+       if (c == '\n') {
+@@ -72,7 +82,14 @@
+     }
+     str[result - 1] = 0;
+     if (is_buffer_owerflow) {
++#if 1
++      LOGE("Line cut off:");
++#else
+       LOGE("Line cut off: %s", str);
++#endif
++#if 0 /* XXX */
++      ESP.restart();
++#endif
+     }
+ 
+     return result;
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpRequest.h arduino-audio-tools/src/AudioHttp/HttpRequest.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpRequest.h	2025-05-05 15:44:02.796844600 +0900
++++ arduino-audio-tools/src/AudioHttp/HttpRequest.h	2025-04-13 18:01:12.361998600 +0900
+@@ -8,6 +8,10 @@
+ #include "AudioHttp/Url.h"
+ #include "AudioTools/AudioLogger.h"
+ 
++#if 1
++#include <Network.h>
++#endif
++
+ #define CHUNK_SIZE 1024
+ 
+ namespace audio_tools {
+@@ -60,6 +64,7 @@
+ 
+   virtual void stop() {
+     if (connected()) {
++      //LOGW("stopping request");
+       LOGI("stop");
+       client_ptr->stop();
+     }
+@@ -184,12 +189,30 @@
+     if (data != nullptr && len <= 0) {
+       len = strlen(data);
+     }
++    //LOGE("starting processBegin()");
++#if 1
++    bool rv = processBegin(action, url, mime, len);
++    if (rv == false) {
++      //LOGE("failed in processBegin()");
++      return -1;
++    }
++#else
+     processBegin(action, url, mime, len);
++#endif
++    //LOGE("exiting processBegin()");
+     // posting data parameter
+     if (len > 0 && data != nullptr) {
++#if 0
++      LOGE("Writing data: %d bytes", len);
++#else
+       LOGI("Writing data: %d bytes", len);
++#endif
+       client_ptr->write((const uint8_t *)data, len);
++#if 0
++      LOGE("%s", data);
++#else
+       LOGD("%s", data);
++#endif
+     }
+     return processEnd();
+   }
+@@ -197,8 +220,15 @@
+   // process http request and reads the reply_header from the server
+   virtual int process(MethodID action, Url &url, const char *mime,
+                       Stream &stream, int len = -1) {
++#if 0
++    if (!processBegin(action, url, mime, len)) {
++      processEnd();
++      return -1;
++    }
++#else
+     if (!processBegin(action, url, mime, len))
+       return -1;
++#endif
+     processWrite(stream);
+     return processEnd();
+   }
+@@ -214,22 +244,54 @@
+       return false;
+     }
+     if (http_connect_callback) {
++      //LOGE("calling http_connect_callback");
+       http_connect_callback(*this, url, request_header);
++      //LOGE("exited http_connect_callback");
+     }
+     if (!this->connected()) {
++#if 0
++      LOGE("process connecting to host %s port %d", url.host(), url.port());
++#else
+       LOGI("process connecting to host %s port %d", url.host(), url.port());
++#endif
++#if 0
++      IPAddress address;
++      if (!Network.hostByName(url.host(), address)) {
++        LOGE("DNS Lookup failed: %s", url.host());
++#if 1
++        ESP.restart();
++#endif
++        return false;
++      } else {
++        LOGE("DNS Lookup result: %02x", address.toString().c_str());
++      }
++#endif
++      //LOGE("calling connect()");
+       int is_connected = connect(url.host(), url.port(), clientTimeout);
++      //LOGE("exited()");
+       if (!is_connected) {
+-        LOGE("Connect failed");
++        //LOGE("Connect failed");
++#if 0 /* XXX */
++        //abort();
++        ESP.restart();
++#endif
+         return false;
+       }
+     } else {
++#if 0
++      LOGE("process is already connected");
++#else
+       LOGI("process is already connected");
++#endif
+     }
+ 
+ #if defined(ESP32) && defined(ARDUINO)
++#if 0
++    LOGW("Free heap: %u", (unsigned)ESP.getFreeHeap());
++#else
+     LOGI("Free heap: %u", (unsigned)ESP.getFreeHeap());
+ #endif
++#endif
+ 
+     reply_header.setProcessed();
+ 
+@@ -244,7 +306,9 @@
+     request_header.put(ACCEPT_ENCODING, accept_encoding);
+     request_header.put(ACCEPT, accept);
+     request_header.put(CONTENT_TYPE, mime);
++    //LOGE("calling request_header.write()");
+     request_header.write(*client_ptr);
++    //LOGE("exited request_header.write()");
+ 
+     return true;
+   }
+@@ -336,8 +400,14 @@
+     client_ptr->setTimeout(timeout / 1000);  // client timeout is in seconds!
+     request_header.setTimeout(timeout);
+     reply_header.setTimeout(timeout);
++    //LOGE("calling client_ptr->connect(): %s, %d, %d", ip, port, timeout);
+     int is_connected = this->client_ptr->connect(ip, port);
++    //LOGE("exited client_ptr->connect(): %d", is_connected);
++#if 0
++    LOGE("is connected %s  with timeout %d", is_connected ? "true" : "false", (int)timeout);
++#else
+     LOGI("is connected %s  with timeout %d", is_connected ? "true" : "false", (int)timeout);
++#endif
+     return is_connected;
+   }
+ };
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-audio-tools/src/AudioHttp/URLStream.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-05 15:44:02.811580700 +0900
++++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-04-30 12:00:03.595921000 +0900
+@@ -48,6 +48,13 @@
+   ~URLStream() {
+     TRACED();
+     end();
++#if 0
++    if (client != nullptr) {
++      client->flush();
++      client->stop();
++      esp_wifi_statis_dump(WIFI_STATIS_ALL);
++    }
++#endif
+ #ifdef USE_WIFI_CLIENT_SECURE
+     if (clientSecure != nullptr) {
+       delete clientSecure;
+@@ -79,12 +86,22 @@
+   virtual bool begin(const char* urlStr, const char* acceptMime = nullptr,
+                      MethodID action = GET, const char* reqMime = "",
+                      const char* reqData = "") override {
++#if 0
++    LOGE("begin() started");
++    esp_wifi_statis_dump(WIFI_STATIS_ALL);
++#endif
+     LOGI("%s: %s", LOG_METHOD, urlStr);
+     if (!preProcess(urlStr, acceptMime)) {
+       LOGE("preProcess failed");
+       return false;
+     }
++#if 0
++    LOGE("calling process()");
++#endif
+     int result = process<const char*>(action, url, reqMime, reqData);
++#if 0
++    LOGE("exited process(): %d", result);
++#endif
+     if (result > 0) {
+       size = request.contentLength();
+       LOGI("size: %d", (int)size);
+@@ -104,12 +121,22 @@
+   virtual bool begin(const char* urlStr, const char* acceptMime,
+                      MethodID action, const char* reqMime, Stream& reqData,
+                      int len = -1) {
++#if 0
++    LOGE("begin() started");
++    esp_wifi_statis_dump(WIFI_STATIS_ALL);
++#endif
+     LOGI("%s: %s", LOG_METHOD, urlStr);
+     if (!preProcess(urlStr, acceptMime)) {
+       LOGE("preProcess failed");
+       return false;
+     }
++#if 0
++    LOGE("calling process() Stream");
++#endif
+     int result = process<Stream&>(action, url, reqMime, reqData, len);
++#if 0
++    LOGE("exited process() Stream: %d", result);
++#endif
+     if (result > 0) {
+       size = request.contentLength();
+       LOGI("size: %d", (int)size);
+@@ -126,6 +153,7 @@
+   }
+ 
+   virtual void end() override {
++    //LOGW("stopping URLStream(): %d", active);
+     if (active) request.stop();
+     active = false;
+     clear();
+@@ -220,6 +248,14 @@
+     request.setOnConnectCallback(callback);
+   }
+ 
++#if 1
++  /// Callback after processEnd
++  void setProcessEndCallback(void (*callback)(
++      URLStream& stream, HttpRequest& request, Url& url)) {
++    process_end_callback = callback;
++  }
++#endif
++
+   void setWaitForData(bool flag) { wait_for_data = flag; }
+ 
+   int contentLength() { return size; }
+@@ -279,6 +315,10 @@
+   unsigned long handshakeTimeout = URL_HANDSHAKE_TIMEOUT;  // 120000
+   bool is_power_save = false;
+ 
++#if 1
++  void (*process_end_callback)(URLStream &stream, HttpRequest &request, Url &url) = nullptr;
++#endif
++
+   bool preProcess(const char* urlStr, const char* acceptMime) {
+     TRACED();
+     custom_log_level.set();
+@@ -289,6 +329,7 @@
+     // close it - if we have an active connection
+     if (active) end();
+ 
++#if 0
+ #ifdef USE_WIFI
+     // optional: login if necessary if no external client is defined
+     if (client == nullptr){
+@@ -299,6 +340,7 @@
+     }
+ 
+ #endif
++#endif
+     // request.reply().setAutoCreateLines(false);
+     if (acceptMime != nullptr) {
+       request.setAcceptMime(acceptMime);
+@@ -306,6 +348,7 @@
+ 
+     // setup client
+     Client& client = getClient(url.isSecure());
++
+     request.setClient(client);
+ 
+     // set timeout
+@@ -334,35 +377,102 @@
+     // keep icy across redirect requests ?
+     const char* icy = request.header().get("Icy-MetaData");
+ 
++    LOGW("Opening: %s", url.url());
++#if 0
++    Client* p_client = &getClient(url.isSecure());
++    if (p_client->connected()) {
++        LOGW("ALREADY CONNECTED");
++        p_client->stop();
++        LOGW("STOPPED");
++#if 0
++        ESP.restart();
++#endif
++        //return -1;
++    }
++#endif
+     int status_code = request.process(action, url, reqMime, reqData, len);
++    //LOGW("Exited request.process(): %d", status_code);
++#if 1
++    if (status_code == -1) {
++     //Client* p_client = &getClient(url.isSecure());
++     //p_client->stop();
++     //LOGE("Stopping client due to process failure");
++
++      return status_code;
++    }
++#endif
+     // redirect
+     while (request.reply().isRedirectStatus()) {
++      //LOGW("Calling request.reply().get()");
+       const char* redirect_url = request.reply().get(LOCATION);
++
++      //LOGW("Exited request.reply().get()");
+       if (redirect_url != nullptr) {
+         LOGW("Redirected to: %s", redirect_url);
+         url.setUrl(redirect_url);
++#if 1
++        clear(); // prevents memory leak
++#endif
+         Client* p_client = &getClient(url.isSecure());
++#if 1 /* XXX */
++        //LOGE("Stopping client");
++#if 0
++        //end();
++        //p_client->flush();
++#endif
+         p_client->stop();
++        //LOGE("Stopped client");
++        if (p_client->connected()) {
++          LOGE("client is still connected");
++        } else {
++          LOGE("client is stopped");
++        }
++        //request.header().end();
++        //request.reply().end();
++        //request.processEnd();
++        //clear(); // prevents memory leak
++#else
++        p_client->stop();
++#endif
+         request.setClient(*p_client);
+         if (icy) {
+           request.header().put("Icy-MetaData", icy);
+         }
++        //LOGW("Calling request.process() Part2");
+         status_code = request.process(action, url, reqMime, reqData, len);
++        //LOGW("Exited request.process() Part2: %d", status_code);
++#if 1
++        if (status_code == -1)
++            return status_code;
++#endif
+       } else {
+         LOGE("Location is null");
+         break;
+       }
+     }
++#if 1
++    if (status_code == 200 && process_end_callback)
++      process_end_callback(*this, request, url);
++#endif
+     return status_code;
+   }
+ 
+   /// Determines the client
+   Client& getClient(bool isSecure) {
++#if 1 /* XXX */
++    if (client != nullptr) {
++      LOGI("EthernetClient");
++      return *client;  // to avoid compiler warning
++    }
++#endif
+ #ifdef USE_WIFI_CLIENT_SECURE
+     if (isSecure) {
+       if (clientSecure == nullptr) {
+         clientSecure = new WiFiClientSecure();
+         clientSecure->setInsecure();
++#if 0
++        clientSecure->setHandshakeTimeout(URL_HANDSHAKE_TIMEOUT / 1000); /* seconds */
++#endif
+       }
+       LOGI("WiFiClientSecure");
+       return *clientSecure;
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStreamBuffered.h arduino-audio-tools/src/AudioHttp/URLStreamBuffered.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStreamBuffered.h	2025-05-05 15:44:02.814366300 +0900
++++ arduino-audio-tools/src/AudioHttp/URLStreamBuffered.h	2025-04-17 01:39:19.469290100 +0900
+@@ -6,7 +6,8 @@
+ #include "AudioTools/AudioStreams.h"
+ 
+ #ifndef URL_STREAM_CORE
+-#  define URL_STREAM_CORE 0
++//#  define URL_STREAM_CORE 0
++#  define URL_STREAM_CORE 1
+ #endif
+ 
+ #ifndef URL_STREAM_PRIORITY
+@@ -15,13 +16,18 @@
+ 
+ #ifndef URL_STREAM_BUFFER_COUNT
+ #  define URL_STREAM_BUFFER_COUNT 10
++//#  define URL_STREAM_BUFFER_COUNT 256
++//#  define URL_STREAM_BUFFER_COUNT 1024
++//#  define URL_STREAM_BUFFER_COUNT 2048
+ #endif
+ 
+ #ifndef STACK_SIZE
+-#  define STACK_SIZE 30000
++//#  define STACK_SIZE 30000
++#  define STACK_SIZE 16384
++//#  define STACK_SIZE 8192
++//#  define STACK_SIZE 4096
+ #endif
+ 
+-
+ namespace audio_tools {
+ 
+ /**
+@@ -47,15 +53,67 @@
+ 
+   virtual void begin(bool wait = true) {
+     TRACED();
++    //LOGW("starting URLStreamBuffered(): %d, %d", active, ready);
+     active = true;
+     ready = false;
++#if 1
++    if (buffers) {
++      LOGW("Why buffers != NULL??");
++      //LOGW("resetting buffers");
++      //ESP.restart();
++      //buffers->reset();
++      //delete buffers;
++    } else {
++      LOGW("allocating buffers");
++      buffers = new SynchronizedNBuffer<uint8_t>(1024, 8, portMAX_DELAY, portMAX_DELAY);
++    }
++#endif
++    //LOGW("buffers allocated");
++#if 1
++    xTaskCreatePinnedToCore/*xTaskCreateUniversal*/(urlStreamBufferedTask, "urlStreamBufferedTask", 30000/*16384*//*8192*/, (void *)this, URL_STREAM_PRIORITY, &urlStreamBufferedTaskHandle, URL_STREAM_CORE);
++    //LOGW("Task created");
++#else
+     task.begin(std::bind(&BufferedTaskStream::processTask, this));
++#endif
+     if (!wait) ready = true;
+   }
+ 
+   virtual void end() {
+     TRACED();
++#if 1
++    //LOGW("stopping URLStreamBuffered(): %d, %d", active, ready);
++    if (urlStreamBufferedTaskHandle) {
++      vTaskDelete(urlStreamBufferedTaskHandle);
++      urlStreamBufferedTaskHandle = NULL;
++    }
++
++    if (buffers) {
++      LOGW("resetting buffers");
++
++#if 0
++      uint8_t buf[1024];
++      while (int len = available()) {
++        LOGW("avail: %d", len);
++        int rv = readBytes(buf, min(1, len));
++        LOGW("rv: %d", rv);
++      }
++#endif
++
++      //while (int len = buffers->available()) {
++      //  buffers->read();
++      //}
++
++      //buffers->reset();
++      //delete buffers;
++      buffers->reset();
++
++      //delete buffers;
++      buffers = NULL;
++    }
++
++#else
+     task.end();
++#endif
+     active = false;
+     ready = false;
+   }
+@@ -78,7 +136,17 @@
+   virtual int read() override {
+     // if (!ready) return -1;
+     int result = -1;
++#if 1
++    if (buffers)
++      result = buffers->read();
++    else
++      result = -1;
++#else
+     result = buffers.read();
++#endif
++    if (result == 0) {
++      LOGE("%s: %zu", LOG_METHOD, result);
++    }
+     return result;
+   }
+ 
+@@ -86,7 +154,14 @@
+   virtual int peek() override {
+     // if (!ready) return -1;
+     int result = -1;
++#if 1
++    if (buffers)
++      result = buffers->peek();
++    else
++      result = -1;
++#else
+     result = buffers.peek();
++#endif
+     return result;
+   };
+ 
+@@ -94,7 +169,14 @@
+   virtual size_t readBytes(uint8_t *data, size_t len) override {
+     // if (!ready) return 0;
+     size_t result = 0;
++#if 1
++    if (buffers)
++      result = buffers->readArray(data, len);
++    else
++      result = -1;
++#else
+     result = buffers.readArray(data, len);
++#endif
+     LOGD("%s: %zu -> %zu", LOG_METHOD, len, result);
+     return result;
+   }
+@@ -103,26 +185,91 @@
+   virtual int available() override {
+     // if (!ready) return 0;
+     int result = 0;
++#if 1
++    if (buffers)
++      result = buffers->available();
++    else
++      result = -1;
++#else
+     result = buffers.available();
++#endif
+     return result;
+   }
+ 
++  void callTask() {
++    processTask();
++    delay(1); // to prevent WDT trigger
++  }
++
++#if 1
++  static void urlStreamBufferedTask(void *pvParameters) {
++    BufferedTaskStream *bufTaskPtr = (BufferedTaskStream *)pvParameters;
++    for (;;) {
++      if (bufTaskPtr) {
++        bufTaskPtr->callTask();
++        //delay(10);
++      }
++    }
++  }
++#endif
++
+  protected:
++#if 1
++  TaskHandle_t urlStreamBufferedTaskHandle = NULL;
++#endif
+   AudioStream *p_stream = nullptr;
+   bool active = false;
++#if 0
+   Task task{"BufferedTaskStream", STACK_SIZE, URL_STREAM_PRIORITY,
+             URL_STREAM_CORE};
+-  SynchronizedNBuffer<uint8_t> buffers{DEFAULT_BUFFER_SIZE,
+-                                       URL_STREAM_BUFFER_COUNT};
++#endif
++#if 1
++  SynchronizedNBuffer<uint8_t> *buffers = NULL;
++#else
++  SynchronizedNBuffer<uint8_t> buffers{512/*DEFAULT_BUFFER_SIZE*/,
++                                       4/*URL_STREAM_BUFFER_COUNT*/};
++#endif
+   bool ready = false;
+ 
+   void processTask() {
++#if 0
++    size_t available_to_write = this->buffers.availableForWrite();
++    LOGW("available: %d", available_to_write);
++    if (*(this->p_stream) && available_to_write >= 512) {
++      size_t to_read = 512;
++      uint8_t buffer[512];
++      size_t avail_read = this->p_stream->readBytes((uint8_t *)buffer, to_read);
++      size_t written = this->buffers.writeArray(buffer, avail_read);
++      //LOGE("processTask(): avail_read %d, written %d", avail_read, written);
++    } else {
++      yield();
++    }
++#else
++#if 1
++    size_t available_to_write = this->buffers->availableForWrite();
++#else
+     size_t available_to_write = this->buffers.availableForWrite();
+-    if (*(this->p_stream) && available_to_write > 0) {
+-      size_t to_read = min(available_to_write, (size_t)512);
++#endif
++    //LOGE("processTask(): available_to_write %d", available_to_write);
++//    if (*(this->p_stream) && available_to_write > 0) {
++    if (*(this->p_stream)) {
++//      size_t to_read = min(available_to_write, (size_t)2048/*512*/);
++//      size_t to_read = min(available_to_write, 512);
++      size_t to_read = 512;
++//      size_t to_read = available_to_write;
++////      size_t to_read = 1024;
+       uint8_t buffer[to_read];
++//      uint8_t buffer[DEFAULT_BUFFER_SIZE];
++//      uint8_t buffer[512];
+       size_t avail_read = this->p_stream->readBytes((uint8_t *)buffer, to_read);
++//      size_t avail_read = this->p_stream->readBytes((uint8_t *)buffer, DEFAULT_BUFFER_SIZE);
++//      size_t avail_read = this->p_stream->readBytes((uint8_t *)buffer, 512);
++#if 1
++      size_t written = this->buffers->writeArray(buffer, avail_read);
++#else
+       size_t written = this->buffers.writeArray(buffer, avail_read);
++#endif
++      //LOGE("processTask(): avail_read %d, written %d", avail_read, written);
+ 
+       if (written != avail_read) {
+         LOGE("DATA Lost! %zu reqested, %zu written!", avail_read, written);
+@@ -136,6 +283,7 @@
+     if (available_to_write == 0) {
+       this->ready = true;
+     }
++#endif
+   }
+ };
+ 
+@@ -177,9 +325,19 @@
+              const char *reqData = "") {
+     TRACED();
+     // start real stream
++    //LOGW("starting URLStream()");
+     bool result = urlStream.begin(urlStr, acceptMime, action, reqMime, reqData);
++#if 1
++    if (result == false) {
++      LOGW("failed to start URLStream() from URLStreamBuffered");
++      return result;
++    }
++#endif
++    //LOGW("started URLStream()");
+     // start buffer task
++    //LOGW("starting taskStream()");
+     taskStream.begin();
++    //LOGW("started taskStream()");
+     return result;
+   }
+ 
+@@ -217,9 +375,22 @@
+     urlStream.setPassword(password);
+   }
+ 
++#if 1
++  void setPowerSave(bool ps) { is_power_save = ps; }
++#endif
++
++#if 1
++  /// Callback after processEnd
++  void setProcessEndCallback(void (*callback)(
++      URLStream& stream, HttpRequest& request, Url& url)) {
++    urlStream.setProcessEndCallback(callback);
++  }
++#endif
++
+  protected:
+   BufferedTaskStream taskStream;
+   URLStream urlStream;
++  bool is_power_save = false;
+ };
+ 
+ }  // namespace audio_tools
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-audio-tools/src/AudioI2S/I2SESP32V1.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h	2025-05-05 15:44:02.834817600 +0900
++++ arduino-audio-tools/src/AudioI2S/I2SESP32V1.h	2025-01-13 02:00:51.532265200 +0900
+@@ -172,6 +172,7 @@
+       // Update slot_mask if only one channel
+       if (cfg.channels == 1) {
+         switch (cfg.channel_format) {
++          default:
+           case I2SChannelSelect::Left:
+             result.slot_mask = I2S_STD_SLOT_LEFT;
+             break;
+@@ -466,4 +467,4 @@
+ 
+ }  // namespace audio_tools
+ 
+-#endif
+\ No newline at end of file
++#endif
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-01 00:03:19.225559300 +0900
+@@ -16,14 +16,31 @@
+ #include "Concurrency/BufferRTOS.h"
+ 
+ 
++#if 1
++extern int push_button_check();
++#endif
++
+ namespace audio_tools {
+ 
+ class A2DPStream;
+ static A2DPStream *A2DPStream_self=nullptr;
+ // buffer which is used to exchange data
+ static BufferRTOS<uint8_t>a2dp_buffer{0, A2DP_BUFFER_SIZE, portMAX_DELAY, portMAX_DELAY};
++//static BufferRTOS<uint8_t>a2dp_buffer{A2DP_BUFFER_SIZE, 0, portMAX_DELAY, portMAX_DELAY};
++//static SynchronizedBufferRTOS<uint8_t>a2dp_buffer{A2DP_BUFFER_SIZE, 0, portMAX_DELAY, portMAX_DELAY};
+ // flag to indicated that we are ready to process data
+ static bool is_a2dp_active = false;
++#if 1
++static int buf_len = 0;
++#endif
++
++#if 1 /* XXX */
++static esp_a2d_connection_state_t connection_state = ESP_A2D_CONNECTION_STATE_DISCONNECTED;
++static int disconnected_count = 0;
++//static char *device = nullptr;
++static bool is_buffering = false;
++static int a2dp_rssi = -75;
++#endif
+ 
+ int32_t a2dp_stream_source_sound_data(Frame* data, int32_t len);
+ void a2dp_stream_sink_sound_data(const uint8_t* data, uint32_t len);
+@@ -52,7 +69,11 @@
+         /// Delay in ms which is added to each write
+         int delay_ms = 1;
+         /// when a2dp source is active but has no data we generate silence data
++#if 1
++        bool silence_on_nodata = true;
++#else
+         bool silence_on_nodata = false;
++#endif
+ };
+ 
+ 
+@@ -134,24 +155,56 @@
+             LOGI("Connecting to %s",cfg.name);
+             a2dp_buffer.resize(cfg.buffer_size);
+ 
++#if 0 /* narita */
+             // initialize a2dp_silence_timeout
+             if (config.silence_on_nodata){
+                 LOGI("Using StartOnConnect")
+                 config.startup_logic = StartOnConnect;
+             }
++#endif
++
++#if 1
++            char *ptr, *comma;
++            std::vector<const char *> names;
++#endif
+ 
+             switch (cfg.mode){
+                 case TX_MODE:
+                     LOGI("Starting a2dp_source...");
+                     source(); // allocate object
++#if 0
++                    //a2dp_source->set_event_stack_size(3072 * 2);
++                    //a2dp_source->set_event_stack_size(8192);
++                    //a2dp_source->set_event_stack_size(1024 * 16);
++                    //a2dp_source->set_event_stack_size(3072 * 4);
++                    //a2dp_source->set_event_stack_size(3072 * 8);
++                    LOGW("set_event_stack_size");
++#endif
+                     a2dp_source->set_auto_reconnect(cfg.auto_reconnect);
+                     a2dp_source->set_volume(volume() * A2DP_MAX_VOL);
++#if 1
++                    if(Str(cfg.name).equals("[Unknown]") || Str(cfg.name).equals("any")){
++#else
+                     if(Str(cfg.name).equals("[Unknown]")){
++#endif
+                         //search next available device
+                         a2dp_source->set_ssid_callback(detected_device);
+                     }
+                     a2dp_source->set_on_connection_state_changed(a2dp_state_callback, this);
++#if 1 /* XXX */
++                    ptr = (char *)cfg.name;
++                    while (nullptr != (comma = strchr(ptr, ','))) {
++                      *comma = 0x0;
++                      LOGE("Adding: %s", ptr);
++                      names.push_back(ptr);
++                      ptr = comma + 1;
++                    }
++                    LOGE("Finally Adding: %s", ptr);
++                    names.push_back(ptr);
++                    a2dp_source->start_raw(names, a2dp_stream_source_sound_data);
++#else
+                     a2dp_source->start_raw((char*)cfg.name, a2dp_stream_source_sound_data);  
++#endif
+                     while(!a2dp_source->is_connected()){
+                         LOGD("waiting for connection");
+                         delay(1000);
+@@ -213,20 +266,49 @@
+ 
+         /// Writes the data into a temporary send buffer - where it can be picked up by the callback
+         size_t write(const uint8_t* data, size_t len) override {   
++#if 1
++            push_button_check();
++#endif
+             LOGD("%s: %zu", LOG_METHOD, len);
+             if (config.mode == TX_MODE){
+                 // at 80% we activate the processing
+                 if(!is_a2dp_active 
+                 && config.startup_logic == StartWhenBufferFull
++#if 1
++                //&& a2dp_buffer.available() >= a2dp_buffer.size() * 7 / 8){
++                && a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4){
++                //&& a2dp_buffer.available() >= a2dp_buffer.size() / 2){
++                //&& a2dp_buffer.available() >= 2 * 44100){
++#else
+                 && a2dp_buffer.available() >= 0.8f * a2dp_buffer.size()){
++#endif
++#if 1
++                /* not calling delay here */
++#else
++                delay(config.delay_ms);
++#endif
+                     LOGI("set active");
+                     is_a2dp_active = true;
+                 }
+ 
+                 // blocking write: if buffer is full we wait
++#if 1
++                while(len > a2dp_buffer.availableForWrite()){
++#else
+                 while(len > 0.9f * a2dp_buffer.availableForWrite() * 100 / 90){
++#endif
++#if 1
++                    //LOGW("Waiting for buffer to be available");
++                    //delay(config.delay_ms);
++                    // delay was NG
++                    //yield();
++                    //delay(1);
++                    //LOGW("Waiting for buffer to be available");
++                    delay(config.delay_ms); /* XXX disabled 2025/4/16 */
++#else
+                     LOGD("Waiting for buffer to be available");
+                     delay(5);
++#endif
+                 }
+             }
+ 
+@@ -235,7 +317,18 @@
+             LOGD("write %d -> %d", len, result);
+             if (config.mode == TX_MODE){
+                 // give the callback a chance to retrieve the data
+-                delay(config.delay_ms);
++#if 0
++                if (a2dp_buffer.available() >= a2dp_buffer.size() / 2) {
++                //if (a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4) {
++                  yield();
++                  //delay(config.delay_ms);
++                }
++#else
++                /* 2025/03/07 delay -> yield */
++                /* 2025/03/29 enabling delay to accel AAC -> no effect */
++                delay(config.delay_ms); // delay() supress WDT trigger. yiedl() doesn't.
++                //yield();
++#endif
+             }
+             return result;
+         }
+@@ -247,8 +340,31 @@
+                 return 0;
+             }
+             LOGD("readBytes %d", len);
++#if 0
++            if (is_buffering && a2dp_buffer.available() >= 0.8f * a2dp_buffer.size()) {
++              is_buffering = false;
++            }
++
++            size_t result;
++            if (is_buffering) {
++              result = 0;
++            } else {
++              result = a2dp_buffer.readArray(data, len);
++            }
++#else
+             size_t result = a2dp_buffer.readArray(data, len);
++#endif
+             LOGI("readBytes %d->%d", len,result);
++#if 0
++            if (result == 0 && is_buffering == false) {
++                LOGW("buffering2");
++                is_buffering = true;
++            }
++            if (config.silence_on_nodata && result == 0){
++              memset(data, 0, len);
++              return len;
++            } else
++#endif
+             return result;
+         }
+        
+@@ -273,6 +389,50 @@
+             return true;
+         }
+ 
++#if 1
++        bool is_a2dp_connected() {
++            return connection_state == ESP_A2D_CONNECTION_STATE_CONNECTED;
++        }
++
++        bool is_a2dp_disconnected() {
++            return connection_state == ESP_A2D_CONNECTION_STATE_DISCONNECTED;
++        }
++
++        void set_a2dp_rssi(int rssi) {
++            a2dp_rssi = rssi;
++            LOGW("a2dp_rssi: %d", rssi);
++        }
++
++        void reset_a2dp_buf() {
++            //LOGW("reset_a2dp_buf()");
++            //a2dp_buffer.resize(0);
++            //a2dp_buffer.reset();
++
++            is_a2dp_active = false;
++#if 1
++            buf_len = 0;
++#endif
++
++#if 1
++            while (int len = a2dp_buffer.available()) {
++              uint8_t* data[1024];
++              a2dp_buffer.readArray((uint8_t*)data, min(len, 1024));
++            }
++#else
++            int count = info.sample_rate / 4;
++            while (int len = a2dp_buffer.available()) {
++              //uint8_t* data[1024];
++              int16_t *data[512 * 2];
++              //a2dp_buffer.readArray((uint8_t*)data, min(len, 1024));
++              a2dp_buffer.readArray((uint8_t*)data, min(len, 1024));
++              if (count > 0) {
++                  
++              }
++            }
++#endif
++        }
++#endif
++
+     protected:
+         A2DPConfig config;
+         BluetoothA2DPSource *a2dp_source = nullptr;
+@@ -284,7 +444,13 @@
+         static bool detected_device(const char* ssid, esp_bd_addr_t address, int rssi){
+             LOGW("found Device: %s rssi: %d", ssid, rssi);
+             //filter out weak signals
++#if 1 /* XXX */
++            //return (rssi > -95);
++            //return (rssi > -85);
++            return (rssi > a2dp_rssi);
++#else
+             return (rssi > -75);
++#endif
+         }
+     
+         static void a2dp_state_callback(esp_a2d_connection_state_t state, void *caller){
+@@ -294,6 +460,33 @@
+                  is_a2dp_active = true;
+             } 
+             LOGW("==> state: %s", self->a2dp->to_str(state));
++#if 1
++            LOGW("==> previous connection_state: %s", self->a2dp->to_str(connection_state));
++            if (state == ESP_A2D_CONNECTION_STATE_CONNECTED) {
++              if (connection_state == ESP_A2D_CONNECTION_STATE_DISCONNECTED) {
++                connection_state = state;
++                LOGW("==> new connection_state: %s", self->a2dp->to_str(connection_state));
++              }
++            } else if (state == ESP_A2D_CONNECTION_STATE_DISCONNECTED) {
++#if 1
++              disconnected_count++;
++              LOGW("Disconnected count: %d, Discovering count: %d", disconnected_count, self->a2dp_source->get_discovering_count());
++              if (connection_state == ESP_A2D_CONNECTION_STATE_CONNECTED
++                  || (self->a2dp_source->get_discovering_count() > 0 && disconnected_count >= 5)
++                  ||  disconnected_count >= 50 /* every 10min */) {
++                LOGW("Disconnected count exceeded: %d", disconnected_count);
++#if 0
++                esp_wifi_set_ps(WIFI_PS_NONE);
++#endif
++#if 1
++                //abort();
++                LOGW("Rebooting...");
++                ESP.restart();
++#endif
++              }
++#endif
++            }
++#endif
+         }
+ 
+ 
+@@ -302,14 +495,63 @@
+             int32_t result_len = 0;
+             A2DPConfig config = A2DPStream_self->config;
+ 
++#if 1
++            push_button_check();
++#endif
++            //LOGW("a2dp source");
+             // at first call we start with some empty data
+             if (is_a2dp_active){
+                 // the data in the file must be in int16 with 2 channels 
++#if 0 /* XXX disabling yield() */
+                 yield();
++                //delay(1);
++#endif
++#if 1 /* XXX */
++                //if (a2dp_buffer.available() > a2dp_buffer.size() * 3 / 4) {
++                  //LOGW("o");
++                //} else {
++                if (1) {
++                  int len = 100 * a2dp_buffer.available() / a2dp_buffer.size() / 25;
++                  if (buf_len != len) {
++                    buf_len = len;
++                    LOGW("Buffered: %d %%", buf_len * 25);
++                  }
++                }
++#endif
++#if 1
++                //if (is_buffering && a2dp_buffer.available() < len) {
++                  //LOGW("a2dp buf: %d", a2dp_buffer.available());
++                  //yield();
++                  //delay(config.delay_ms);
++                //}
++                if (is_buffering && a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4) {
++//                if (is_buffering && a2dp_buffer.available() >= 0.8f * a2dp_buffer.size()) {
++                //if (is_buffering && a2dp_buffer.available() >= len) {
++                  LOGW("a2dp buffered: %d", a2dp_buffer.available());
++
++                  is_buffering = false;
++                }
++                if (is_buffering || a2dp_buffer.available() < len) {
++                  if (is_buffering == false) {
++                    LOGW("Buffering...");
++                    is_buffering = true;
++                  }
++                  result_len = 0;
++                  //yield();
++                } else
++#endif
+                 result_len = a2dp_buffer.readArray((uint8_t*)data, len);
++                //LOGW("a2dp: %d -> %d", len, result_len);   
++#if 1
++                if ((result_len == 0 || result_len < 0) && is_buffering == false) {
++                    LOGW("buffering");
++                    is_buffering = true;
++                }
++#endif
+ 
+                 // provide silence data
+-                if (config.silence_on_nodata && result_len == 0){
++                if (config.silence_on_nodata && (result_len == 0 || result_len < 0)) {
++                    LOGD("silence: %d -> %d", len, result_len); /* typically 512 bytes */
+                     memset(data,0, len);
+                     result_len = len;
+                 }
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h arduino-audio-tools/src/AudioMetaData/MetaDataID3.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h	2025-05-05 15:44:03.058573800 +0900
++++ arduino-audio-tools/src/AudioMetaData/MetaDataID3.h	2025-04-23 02:30:19.764615600 +0900
+@@ -528,7 +528,11 @@
+                         result[end_pos]=0;
+                         int idx = atoi(result+1);
+                         if (idx>=0 && idx< (int)sizeof(genres)){
++#if 1
++                            memcpy((char*)result,genres[idx],256);
++#else
+                             strncpy((char*)result,genres[idx],256);
++#endif
+                         }
+                     }
+                 }
+@@ -593,4 +597,4 @@
+     int filter = SELECT_ID3;
+ };
+ 
+-} // namespace
+\ No newline at end of file
++} // namespace
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino-audio-tools/src/AudioTools/AudioPlayer.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-05 15:44:03.153797900 +0900
++++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-04-20 15:27:22.990106000 +0900
+@@ -13,6 +13,10 @@
+ #include "AudioTools/Fade.h"
+ #include "AudioTools/StreamCopy.h"
+ 
++#if 1
++#include "AudioLibs/A2DPStream.h"
++#endif
++
+ // support for legacy USE_SDFAT
+ #ifdef USE_SDFAT
+ #include "AudioLibs/AudioSourceSDFAT.h"
+@@ -99,13 +103,31 @@
+     decoder.addNotifyAudioChange(*this);
+   }
+ 
++  AudioPlayer(AudioSource &source, AudioStream &output, AudioDecoder &decoder, FormatConverterStream &conv) {
++    TRACED();
++    this->p_source = &source;
++    this->p_decoder = &decoder;
++    this->p_conv = &conv;
++    setOutput(output);
++    // notification for audio configuration
++    decoder.addNotifyAudioChange(*this);
++  }
++
+   AudioPlayer(AudioPlayer const &) = delete;
+ 
+   AudioPlayer &operator=(AudioPlayer const &) = delete;
+ 
+   void setOutput(AudioOutput &output) {
+     if (p_decoder->isResultPCM()) {
++#if 1
++     if (p_conv != nullptr) {
++      this->fade.setOutput(*p_conv);
++     } else {
++#endif
+       this->fade.setOutput(output);
++#if 1
++     }
++#endif
+       this->volume_out.setOutput(fade);
+       out_decoding.setOutput(&volume_out);
+       out_decoding.setDecoder(p_decoder);
+@@ -133,7 +155,15 @@
+ 
+   void setOutput(AudioStream &output) {
+     if (p_decoder->isResultPCM()) {
++#if 1
++     if (p_conv != nullptr) {
++      this->fade.setOutput(*p_conv);
++     } else {
++#endif
+       this->fade.setOutput(output);
++#if 1
++     }
++#endif
+       this->volume_out.setOutput(fade);
+       out_decoding.setOutput(&volume_out);
+       out_decoding.setDecoder(p_decoder);
+@@ -171,6 +201,9 @@
+     meta_out.begin();
+ 
+     if (index >= 0) {
++#if 0
++      LOGE("calling selectStream()");
++#endif
+       p_input_stream = p_source->selectStream(index);
+       if (p_input_stream != nullptr) {
+         if (meta_active) {
+@@ -211,8 +244,17 @@
+ 
+   /// (Re)defines the decoder
+   void setDecoder(AudioDecoder &decoder) {
++#if 1 /* narita: changing decoder to AAC worked */
++    if (p_decoder) {
++      p_decoder->end();
++    }
++#endif
+     this->p_decoder = &decoder;
+     out_decoding.setDecoder(p_decoder);
++#if 1 /* narita: changing decoder to AAC worked */
++    decoder.addNotifyAudioChange(*this);
++    p_decoder->begin();
++#endif
+   }
+ 
+   /// (Re)defines the notify
+@@ -227,10 +269,28 @@
+   /// Updates the audio info in the related objects
+   virtual void setAudioInfo(AudioInfo info) override {
+     TRACED();
++#if 1
++    LOGW("sample_rate: %d", (int) info.sample_rate);
++    LOGW("bits_per_sample: %d", (int) info.bits_per_sample);
++    LOGW("channels: %d", (int) info.channels);
++    if (info.sample_rate == 11025 && info.channels == 2) {
++      //info.sample_rate = 22050;
++      //info.channels = 1;
++      //LOGW("Modified sample_rate: %d", (int) info.sample_rate);
++      //LOGW("Modified channels: %d", (int) info.channels);
++    }
++#else
+     LOGI("sample_rate: %d", (int) info.sample_rate);
+     LOGI("bits_per_sample: %d", (int) info.bits_per_sample);
+     LOGI("channels: %d", (int) info.channels);
++#endif
+     this->info = info;
++#if 1 /* XXX */
++    if (p_conv != nullptr) {
++      //p_conv->setAudioInfo(info);
++      p_conv->begin(info);
++    }
++#endif
+     // notifiy volume
+     volume_out.setAudioInfo(info);
+     fade.setAudioInfo(info);
+@@ -264,6 +324,9 @@
+     writeEnd();
+     stream_increment = offset >= 0 ? 1 : -1;
+     active = setStream(p_source->nextStream(offset));
++#if 0
++    LOGW("next(): %d", active);
++#endif
+     return active;
+   }
+ 
+@@ -296,14 +359,33 @@
+ 
+   /// start selected input stream
+   virtual bool setStream(Stream *input) {
++#if 0 /* XXX */
++    //LOGW("start setStream()");
++    //out_decoding.end();
++    //if (p_input_stream) {
++    //  ((URLStreamBuffered *)p_input_stream)->end();
++    //}
++#endif
+     end();
++#if 1
++    // reset a2dp buffer after flush in decoder
++    ((A2DPStream *)p_final_print)->reset_a2dp_buf();
++#endif
+     out_decoding.begin();
+     p_input_stream = input;
+     if (p_input_stream != nullptr) {
++#if 0
++      LOGW("open selected stream");
++#else
+       LOGD("open selected stream");
++#endif
+       meta_out.begin();
+       copier.begin(out_decoding, *p_input_stream);
+     }
++#if 0
++    else
++      LOGW("setStream(): NULL_STREAM");
++#endif
+     return p_input_stream != nullptr;
+   }
+ 
+@@ -357,6 +439,12 @@
+   /// Defines the wait time in ms if the target output is full
+   virtual void setDelayIfOutputFull(int delayMs) { delay_if_full = delayMs; }
+ 
++#if 1
++  int available() {
++    return copier.available();
++  }
++#endif
++
+   virtual size_t copy() {
+     return copy(copier.bufferSize());
+   }
+@@ -473,6 +561,9 @@
+   float current_volume = -1.0f; // illegal value which will trigger an update
+   int delay_if_full = 100;
+   bool is_auto_fade = true;
++#if 1
++  FormatConverterStream *p_conv = nullptr;
++#endif
+ 
+   void setupFade() {
+     if (p_final_print != nullptr) {
+@@ -480,6 +571,9 @@
+     } else if (p_final_stream != nullptr) {
+       fade.setAudioInfo(p_final_stream->audioInfo());
+     }
++#if 1 /* XXX */
++    fade.setFadeInActive(true);
++#endif
+   }
+ 
+   virtual void moveToNextFileOnTimeout() {
+@@ -507,10 +601,14 @@
+     // end silently
+     TRACEI();
+     if (is_auto_fade) {
++#if 1
++      fade.setFadeInActive(true);
++#else
+       fade.setFadeOutActive(true);
+       copier.copy();
+       // start by fading in
+       fade.setFadeInActive(true);
++#endif
+     }
+     // restart the decoder to make sure it does not contain any audio when we
+     // continue
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioSource.h arduino-audio-tools/src/AudioTools/AudioSource.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioSource.h	2025-05-05 15:44:03.163984000 +0900
++++ arduino-audio-tools/src/AudioTools/AudioSource.h	2025-04-14 22:00:32.231116800 +0900
+@@ -184,8 +184,24 @@
+             LOGI("url array out of limits: %d -> %d", idx, pos);
+         }
+         LOGI("selectStream: %d/%d -> %s", pos, size() - 1, value(pos));
++        //LOGW("selectStream(): checking started: %d", started);
+         if (started) actual_stream->end();
++#if 1
++        bool rv;
++        rv = actual_stream->begin(value(pos), mime);
++        //LOGW("rv %d", rv);
++        if (rv == 0) {
++          //LOGW("actual_stream->begin() failed: %d", rv);
++          actual_stream->end();
++#if 0
++          LOGE("rebooting...");
++          ESP.restart();
++#endif
++          return NULL;
++        }
++#else
+         actual_stream->begin(value(pos), mime);
++#endif
+         started = true;
+         return actual_stream;
+     }
+@@ -318,4 +334,4 @@
+ 
+ #endif
+ 
+-}
+\ No newline at end of file
++}
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioStreamsConverter.h arduino-audio-tools/src/AudioTools/AudioStreamsConverter.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioStreamsConverter.h	2025-05-05 15:44:03.169828900 +0900
++++ arduino-audio-tools/src/AudioTools/AudioStreamsConverter.h	2025-03-30 21:44:55.765436300 +0900
+@@ -756,14 +756,54 @@
+     setAudioInfo(from);
+ 
+     // build output chain
++#if 1
++    if (from_cfg.bits_per_sample == to_cfg.bits_per_sample
++        && from_cfg.sample_rate == to_cfg.sample_rate) {
++      if (getStream() != nullptr) {
++        channelFormatConverter.setStream(*getStream());
++      }
++      if (getPrint() != nullptr) {
++        channelFormatConverter.setOutput(*getPrint());
++      }
++    } else if (from_cfg.bits_per_sample != to_cfg.bits_per_sample
++        && from_cfg.sample_rate == to_cfg.sample_rate) {
++      if (getStream() != nullptr) {
++        numberFormatConverter.setStream(*getStream());
++      }
++      if (getPrint() != nullptr) {
++        numberFormatConverter.setOutput(*getPrint());
++      }
++      channelFormatConverter.setStream(numberFormatConverter);
++    } else if (from_cfg.bits_per_sample == to_cfg.bits_per_sample
++        && from_cfg.sample_rate != to_cfg.sample_rate) {
++      if (getStream() != nullptr) {
++        sampleRateConverter.setStream(*getStream());
++      }
++      if (getPrint() != nullptr) {
++        sampleRateConverter.setOutput(*getPrint());
++      }
++      channelFormatConverter.setStream(sampleRateConverter);
++    } else {
++      if (getStream() != nullptr) {
++        sampleRateConverter.setStream(*getStream());
++      }
++      if (getPrint() != nullptr) {
++        sampleRateConverter.setOutput(*getPrint());
++      }
++      numberFormatConverter.setStream(sampleRateConverter);
++      channelFormatConverter.setStream(numberFormatConverter);
++    }
++#else
+     if (getStream() != nullptr) {
+       sampleRateConverter.setStream(*getStream());
+     }
+     if (getPrint() != nullptr) {
+       sampleRateConverter.setOutput(*getPrint());
+     }
++
+     numberFormatConverter.setStream(sampleRateConverter);
+     channelFormatConverter.setStream(numberFormatConverter);
++#endif
+ 
+     // start individual converters
+     bool result = channelFormatConverter.begin(from_cfg, to_cfg.channels);
+@@ -818,4 +858,4 @@
+   }
+ };
+ 
+-}  // namespace audio_tools
+\ No newline at end of file
++}  // namespace audio_tools
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-tools/src/AudioTools/Fade.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h	2025-05-05 15:44:03.188016000 +0900
++++ arduino-audio-tools/src/AudioTools/Fade.h	2025-04-20 16:53:22.926540800 +0900
+@@ -15,9 +15,19 @@
+ 
+ class Fade {
+ public:
++#if 1
++  void setBitsPerSample(int bits_per_sample) {
++    bits_per_sample = bits_per_sample;
++  }
++#endif
++
+   void setFadeInActive(bool flag) {
++    //LOGW("setFadeInAtive(): %d", flag);
+     is_fade_in = flag;
+     if (is_fade_in) {
++#if 1
++      fade_frames = bits_per_sample / 2; /* assuming 500msec */
++#endif
+       volume = 0.0;
+       is_fade_out = false;
+       is_done = false;
+@@ -74,13 +84,40 @@
+   int channels = 2;
+   float volume = 1.0;
+   bool is_done = false;
++#if 1
++  int bits_per_sample = 44100;
++  int fade_frames = bits_per_sample / 2; /* assuming 500msec */
++#endif
+ 
+   template <typename T> void convertFrames(T *data, int frames, int channels) {
++#if 1
++    float delta = 1.0 / (bits_per_sample / 2); /* assuming 500msec */
++#else
+     float delta = 1.0 / frames;
++#endif
+     // handle fade out
+     if (is_fade_in) {
++#if 0 /* XXX */
++      if (frames > fade_frames) {
++        frames = fade_frames;
++      }
++#endif
+       fadeIn<T>(data, frames, channels, delta);
++#if 1 /* XXX */
++      if (fade_frames > 0) {
++        fade_frames -= frames;
++        //LOGW("fadeIn: %d (%d) [%f]", fade_frames, frames, volume);
++        if (fade_frames <= 0) {
++          is_fade_in = false;
++          //LOGW("fadeIn: Finished");
++          /* and 'is_done' is to be 'true'. See below. */
++        } else {
++          frames = 0; /* to prevent from 'is_done' being 'true'. See below. */
++        }
++      }
++#else
+       is_fade_in = false;
++#endif
+     }  else if (is_fade_out) {
+       fadeOut<T>(data, frames, channels, delta);
+     }
+@@ -94,13 +131,23 @@
+     for (int j = 0; j < frames; j++) {
+       for (int ch = 0; ch < channels; ch++) {
+         data[j * channels + ch] = data[j * channels + ch] * volume;
++#if 0
+         if (volume > 0) {
+           volume -= delta;
+           if (volume < 0) {
+             volume = 0;
+           }
+         }
++#endif
+       }
++#if 1
++      if (volume > 0) {
++        volume -= delta;
++        if (volume < 0) {
++          volume = 0;
++        }
++      }
++#endif
+     }
+     is_fade_out = false;
+     LOGI("faded out %d frames to volume %f",frames, volume);
+@@ -108,18 +155,33 @@
+ 
+   template <typename T>
+   void fadeIn(T *data, int frames, int channels, float delta) {
++#if 0
++    LOGW("fade in %d frames from volume %f",frames, volume);
++    //LOGW("data: %f -> %f", (float)data[0], (float)data[0] * volume);
++#else
+     LOGI("fade in %d frames from volume %f",frames, volume);
++#endif
+     for (int j = 0; j < frames; j++) {
+       for (int ch = 0; ch < channels; ch++) {
+         data[j * channels + ch] = data[j * channels + ch] * volume;
++#if 0
+         volume += delta;
+         if (volume > 1.0f) {
+           volume = 1.0f;
+         }
++#endif
+       }
++#if 1
++      volume += delta;
++      if (volume > 1.0f) {
++          volume = 1.0f;
++      }
++#endif
+     }
++#if 0
+     volume = 1.0f;
+     is_fade_in = false;
++#endif
+   }
+ };
+ 
+@@ -267,6 +329,9 @@
+   void setAudioInfo(AudioInfo info) override {
+     AudioStream::setAudioInfo(info);
+     fade_last.setAudioInfo(info);
++#if 1
++    fade.setBitsPerSample(info.bits_per_sample);
++#endif
+     active = true;
+   }
+ 
+@@ -322,6 +387,7 @@
+   LastSampleFader fade_last;
+   Print *p_out = nullptr;
+   Stream *p_io = nullptr;
++
+   const char *error_msg = "setAudioInfo not called";
+ };
+ 
+@@ -357,4 +423,4 @@
+   Fade fade;
+ };
+ 
+-} // namespace audio_tools
+\ No newline at end of file
++} // namespace audio_tools
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/ResampleStream.h arduino-audio-tools/src/AudioTools/ResampleStream.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/ResampleStream.h	2025-05-05 15:44:03.198248900 +0900
++++ arduino-audio-tools/src/AudioTools/ResampleStream.h	2025-01-13 02:00:51.131277400 +0900
+@@ -253,19 +253,30 @@
+ 
+       if (is_buffer_active) {
+         // if buffer is full we send it to output
++#if 0
++        if (out_buffer.availableForWrite() <= (int)(frame_size / step_size + 1.0)) {
++#else
+         if (out_buffer.availableForWrite() <= frame_size) {
++#endif
+           flush();
+         }
+ 
+         // we use a buffer to minimize the number of output calls
+         int tmp_written =
+             out_buffer.writeArray((const uint8_t *)&frame, frame_size);
++#if 0
++        tmp_written =
++            out_buffer.writeArray((const uint8_t *)&frame, frame_size);
++#endif
+         written += tmp_written;
+         if (frame_size != tmp_written) {
+           TRACEE();
+         }
+       } else {
+         int tmp = p_out->write((const uint8_t *)&frame, frame_size);
++#if 0
++        tmp = p_out->write((const uint8_t *)&frame, frame_size);
++#endif
+         written += tmp;
+         if (tmp != frame_size) {
+           LOGE("Failed to write %d bytes: %d", (int)frame_size, tmp);
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/Concurrency/SynchronizedBuffers.h arduino-audio-tools/src/Concurrency/SynchronizedBuffers.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/Concurrency/SynchronizedBuffers.h	2025-05-05 15:44:03.258825900 +0900
++++ arduino-audio-tools/src/Concurrency/SynchronizedBuffers.h	2025-04-17 01:21:58.586000900 +0900
+@@ -157,6 +157,69 @@
+     }
+   }
+ 
++#if 0
++  ~SynchronizedNBuffer() {
++    BaseBuffer<T> *tmp;
++    LOGW("now deleting available buffers");
++    available_buffers.resize(0);
++    filled_buffers.resize(0);
++#if 0
++    while (available_buffers.dequeue(tmp)) {
++      LOGW("getNext Avail: %x", tmp);
++      delete tmp;
++    }
++    LOGW("now deleting filled buffers");
++    //filled_buffers.clear();
++    //filled_buffers.reset();
++    while (filled_buffers.dequeue(tmp)) {
++      LOGW("getNext Filled: %x", tmp);
++      delete tmp;
++    }
++#endif
++  }
++#endif
++
++  void reset() {
++    //available_buffers.end();
++    //filled_buffers.end();
++    //available_buffers.clear();
++    //filled_buffers.clear();
++    available_buffers.resize(0);
++    filled_buffers.resize(0);
++  }
++
++#if 0
++  void reset(int bufferSize, int bufferCount) {
++    int i;
++    BaseBuffer<T> *tmp;
++    LOGW("now deleting available buffers");
++    i = 0;
++    while (NULL != (tmp = getNextAvailableBuffer())) {
++      i++;
++      LOGE("deleting avail idx=%d", i);
++      delete tmp;
++    }
++    LOGW("now deleting filled buffers");
++    i = 0;
++    while (NULL != (tmp = getNextFilledBuffer())) {
++      i++;
++      LOGE("deleting filled idx=%d", i);
++      delete tmp;
++    }
++
++    // setup buffers
++    NBuffer<T>::write_buffer_count = 0;
++    for (int j = 0; j < bufferCount; j++) {
++      BaseBuffer<T> *tmp = new SingleBuffer<T>(bufferSize);
++      if (tmp != nullptr) {
++        available_buffers.enqueue(tmp);
++      } else {
++        LOGE("Not Enough Memory for buffer %d", j);
++      }
++    }
++  }
++#endif
++
+   void setReadMaxWait(TickType_t ticks){
+       available_buffers.setReadMaxWait(ticks);
+       filled_buffers.setReadMaxWait(ticks);

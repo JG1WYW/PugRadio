@@ -1,0 +1,493 @@
+diff -ur ../../TMP_LIBS/ESP32-A2DP/CMakeLists.txt ESP32-A2DP/CMakeLists.txt
+--- ../../TMP_LIBS/ESP32-A2DP/CMakeLists.txt	2025-05-05 15:28:15.665789300 +0900
++++ ESP32-A2DP/CMakeLists.txt	2025-01-13 02:00:48.566987000 +0900
+@@ -5,7 +5,7 @@
+ idf_component_register(
+     SRC_DIRS src
+     INCLUDE_DIRS src 
+-    REQUIRES bt esp_common freertos hal log nvs_flash driver
++    REQUIRES bt esp_common freertos hal log nvs_flash driver arduino
+ )
+ 
+ target_compile_options(${COMPONENT_LIB} PUBLIC -DA2DP_LEGACY_I2S_SUPPORT=1 -DA2DP_I2S_AUDIOTOOLS=0 -Wno-error -Wno-format -fpermissive)
+diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/BluetoothA2DPSource.cpp
+--- ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp	2025-05-05 15:28:15.861972600 +0900
++++ ESP32-A2DP/src/BluetoothA2DPSource.cpp	2025-01-13 21:35:18.580221100 +0900
+@@ -14,6 +14,9 @@
+ // Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+ 
+ #include "BluetoothA2DPSource.h"
++#if 1
++#include <Esp.h>
++#endif
+ 
+ #define BT_APP_SIG_WORK_DISPATCH (0x01)
+ #define BT_APP_SIG_WORK_DISPATCH (0x01)
+@@ -356,9 +359,21 @@
+ 
+   rmt_bdname = esp_bt_gap_resolve_eir_data(eir, ESP_BT_EIR_TYPE_CMPL_LOCAL_NAME,
+                                            &rmt_bdname_len);
++#if 0
++  if (rmt_bdname) {
++    rmt_bdname[rmt_bdname_len] = 0x0;
++    ESP_LOGW(BT_AV_TAG, "BDNAME1: %s", rmt_bdname);
++  }
++#endif
+   if (!rmt_bdname) {
+     rmt_bdname = esp_bt_gap_resolve_eir_data(
+         eir, ESP_BT_EIR_TYPE_SHORT_LOCAL_NAME, &rmt_bdname_len);
++#if 0
++    if (rmt_bdname) {
++      rmt_bdname[rmt_bdname_len] = 0x0;
++      ESP_LOGW(BT_AV_TAG, "BDNAME2: %s", rmt_bdname);
++    }
++#endif
+   }
+ 
+   if (rmt_bdname) {
+@@ -386,7 +401,11 @@
+   uint8_t *eir = NULL;
+   esp_bt_gap_dev_prop_t *p;
+ 
++#if 1
++  ESP_LOGW(BT_AV_TAG, "Scanned device: %s", to_str(param->disc_res.bda));
++#else
+   ESP_LOGI(BT_AV_TAG, "Scanned device: %s", to_str(param->disc_res.bda));
++#endif
+   for (int i = 0; i < param->disc_res.num_prop; i++) {
+     p = param->disc_res.prop + i;
+     switch (p->type) {
+@@ -409,16 +428,35 @@
+   /* search for device with MAJOR service class as "rendering" in COD */
+   if (!esp_bt_gap_is_valid_cod(cod) ||
+       !(esp_bt_gap_get_cod_srvc(cod) & ESP_BT_COD_SRVC_RENDERING)) {
++#if 1
++    ESP_LOGW(BT_AV_TAG, "--Compatiblity: Incompatible");
++#else
+     ESP_LOGI(BT_AV_TAG, "--Compatiblity: Incompatible");
++#endif
+     return;
+   }
+ 
+   /* search for target device in its Extended Inqury Response */
+   if (eir) {
+ 
++#if 1
++    ESP_LOGW(BT_AV_TAG, "--Compatiblity: Compatible");
++#else
+     ESP_LOGI(BT_AV_TAG, "--Compatiblity: Compatible");
++#endif
++#if 1
++    if (false == get_name_from_eir(eir, s_peer_bdname, NULL)) {
++      ESP_LOGW(BT_AV_TAG, "get_name_from_eir returns false");
++      strcpy(s_peer_bdname, "[Unknown]");
++    }
++#else
+     get_name_from_eir(eir, s_peer_bdname, NULL);
++#endif
++#if 1
++    ESP_LOGW(BT_AV_TAG, "--Name: %s", s_peer_bdname);
++#else
+     ESP_LOGI(BT_AV_TAG, "--Name: %s", s_peer_bdname);
++#endif
+ 
+     // check ssid names from provided list
+     bool found = false;
+@@ -430,7 +468,11 @@
+       // if no callback we use the list
+       for (const char *name : bt_names) {
+         int len = strlen(name);
++#if 1
++        ESP_LOGW(BT_AV_TAG, "--Checking match: %s", name);
++#else
+         ESP_LOGD(BT_AV_TAG, "--Checking match: %s", name);
++#endif
+         if (strncmp((char *)s_peer_bdname, name, len) == 0) {
+           this->bt_name = (char *)s_peer_bdname;
+           found = true;
+@@ -439,21 +481,38 @@
+       }
+     }
+     if (found) {
++#if 1
++      ESP_LOGW(BT_AV_TAG, "--Result: Target device found");
++#else
+       ESP_LOGI(BT_AV_TAG, "--Result: Target device found");
++#endif
+       s_a2d_state = APP_AV_STATE_DISCOVERED;
+       memcpy(peer_bd_addr, param->disc_res.bda, ESP_BD_ADDR_LEN);
+       set_last_connection(peer_bd_addr);
++#if 1
++      ESP_LOGW(BT_AV_TAG, "Cancel device discovery ...");
++#else
+       ESP_LOGI(BT_AV_TAG, "Cancel device discovery ...");
++#endif
+       esp_bt_gap_cancel_discovery();
+     } else {
++#if 1
++      ESP_LOGW(BT_AV_TAG, "--Result: Target device not found");
++#else
+       ESP_LOGI(BT_AV_TAG, "--Result: Target device not found");
++#endif
++      //vTaskDelay(1000);
+     }
+   }
+ }
+ 
+ void BluetoothA2DPSource::bt_app_gap_callback(esp_bt_gap_cb_event_t event,
+                                               esp_bt_gap_cb_param_t *param) {
++#if 0
++  ESP_LOGW(BT_AV_TAG, "%s evt %d", __func__, event);
++#else
+   ESP_LOGD(BT_AV_TAG, "%s evt %d", __func__, event);
++#endif
+   switch (event) {
+   case ESP_BT_GAP_DISC_RES_EVT: {
+     filter_inquiry_scan_result(param);
+@@ -463,16 +522,52 @@
+     if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
+       if (s_a2d_state == APP_AV_STATE_DISCOVERED) {
+         s_a2d_state = APP_AV_STATE_CONNECTING;
++#if 1
++        ESP_LOGW(BT_AV_TAG, "Device discovery stopped.");
++        ESP_LOGW(BT_AV_TAG, "a2dp connecting to peer: %s", s_peer_bdname);
++#else
+         ESP_LOGI(BT_AV_TAG, "Device discovery stopped.");
+         ESP_LOGI(BT_AV_TAG, "a2dp connecting to peer: %s", s_peer_bdname);
++#endif
+         esp_a2d_connect(peer_bd_addr);
+       } else {
+         // not discovered, continue to discover
++#if 1
++        ESP_LOGW(BT_AV_TAG, "Device discovery failed, continue to discover...");
++        if (s_a2d_state == APP_AV_STATE_CONNECTED) {
++          ESP_LOGW(BT_AV_TAG, "Device already connected. Ignoring it...");
++          break;
++        }
++        //static int discovery_failed = 0;
++        //if (0 && ++discovery_failed >= 100) {
++        //  ESP_LOGW(BT_AV_TAG, "Device discovery failed, rebooting...");
++        //  ESP.restart();
++        //} else {
++        //  ESP_LOGW(BT_AV_TAG, "Device discovery failed, continue to discover...");
++        //}
++#else
+         ESP_LOGI(BT_AV_TAG, "Device discovery failed, continue to discover...");
++#endif
++#if 1
++        esp_err_t rv = esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 10, 0);
++        //ESP_LOGW(BT_AV_TAG, "rv = %d", rv);
++        if (rv != ESP_OK) {
++          ESP_LOGW(BT_AV_TAG, "rv = %d (!= 0)", rv);
++          ESP.restart();
++        }
++#else
+         esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 10, 0);
++#endif
+       }
+     } else if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STARTED) {
++#if 1
++      discovering_count = 1;
++#endif
++#if 1
++      ESP_LOGW(BT_AV_TAG, "Discovery started.");
++#else
+       ESP_LOGI(BT_AV_TAG, "Discovery started.");
++#endif
+     }
+     break;
+   }
+@@ -531,6 +626,7 @@
+     esp_bt_gap_ssp_confirm_reply(param->cfm_req.bda, true);
+     break;
+ 
++#if 0 /* XXX */
+ #if ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(4, 4, 4)
+   case ESP_BT_GAP_ACL_CONN_CMPL_STAT_EVT:
+     ESP_LOGI( BT_AV_TAG,"ESP_BT_GAP_ACL_CONN_CMPL_STAT_EVT");
+@@ -541,6 +637,7 @@
+              param->mode_chg.mode);
+     break;
+ #endif
++#endif /* XXX */
+ 
+   default: {
+     ESP_LOGI(BT_AV_TAG, "event: %d", event);
+@@ -550,8 +647,16 @@
+   return;
+ }
+ 
++#if 1
++extern int btu_connecting_count;
++#endif
++
+ void BluetoothA2DPSource::bt_av_hdl_stack_evt(uint16_t event, void *p_param) {
++#if 0
++  ESP_LOGW(BT_AV_TAG, "%s event: %d", __func__, event);
++#else
+   ESP_LOGD(BT_AV_TAG, "%s event: %d", __func__, event);
++#endif
+ 
+   switch (event) {
+   /* when stack up worked, this event comes */
+@@ -565,12 +670,14 @@
+     esp_avrc_ct_init();
+     esp_avrc_ct_register_callback(ccall_bt_app_rc_ct_cb);
+ 
++#if 0 /* XXX */
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+     esp_avrc_rn_evt_cap_mask_t evt_set = {0};
+     esp_avrc_rn_evt_bit_mask_operation(ESP_AVRC_BIT_MASK_OP_SET, &evt_set,
+                                        ESP_AVRC_RN_VOLUME_CHANGE);
+     assert(esp_avrc_tg_set_rn_evt_cap(&evt_set) == ESP_OK);
+ #endif
++#endif /* XXX */
+ 
+     esp_a2d_source_init();
+     esp_a2d_register_callback(&ccall_bt_app_a2d_cb);
+@@ -581,15 +688,31 @@
+     //esp_bt_gap_set_scan_mode(ESP_BT_NON_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
+     set_scan_mode_connectable(false);
+     if (reconnect_status == AutoReconnect && has_last_connection()) {
++#if 1
++      btu_connecting_count = 0;
++#endif
+       ESP_LOGW(BT_AV_TAG, "Reconnecting to %s", to_str(last_connection));
+       memcpy(peer_bd_addr, last_connection, ESP_BD_ADDR_LEN);
+       connect_to(last_connection);
+       s_a2d_state = APP_AV_STATE_CONNECTING;
+     } else {
+ 
++#if 1
++      ESP_LOGW(BT_AV_TAG, "Starting device discovery...");
++#else
+       ESP_LOGI(BT_AV_TAG, "Starting device discovery...");
++#endif
+       s_a2d_state = APP_AV_STATE_DISCOVERING;
++#if 1
++      esp_err_t rv = esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 10, 0);
++      //ESP_LOGW(BT_AV_TAG, "rv = %d", rv);
++      if (rv != ESP_OK) {
++        ESP_LOGW(BT_AV_TAG, "rv = %d (!= 0)", rv);
++        ESP.restart();
++      }
++#else
+       esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 10, 0);
++#endif
+     }
+     /* create and start heart beat timer */
+       int tmr_id = 0;
+@@ -652,12 +775,25 @@
+ }
+ 
+ void BluetoothA2DPSource::bt_app_av_sm_hdlr(uint16_t event, void *param) {
++#if 0
++  ESP_LOGW(BT_AV_TAG, "%s state %s, evt 0x%x", __func__, to_state_str(s_a2d_state), event);
++#else
+   ESP_LOGI(BT_AV_TAG, "%s state %s, evt 0x%x", __func__, to_state_str(s_a2d_state), event);
++#endif
+   process_user_state_callbacks(event, param);
+ 
+   /* select handler according to different states */
+   switch (s_a2d_state) {
+   case APP_AV_STATE_DISCOVERING:
++#if 0 /* XXX */
++    ESP_LOGE(BT_AV_TAG, "s_a2d_state is Discovering: %d", discovering_count);
++#endif
++#if 1 /* XXX */
++    if (++discovering_count >= 5) {
++      ESP_LOGE(BT_AV_TAG, "Discovery count exceeded: %d", discovering_count);
++      ESP.restart();
++    }
++#endif
+   case APP_AV_STATE_DISCOVERED:
+     break;
+   case APP_AV_STATE_UNCONNECTED:
+@@ -691,6 +827,13 @@
+     break;
+   case BT_APP_HEART_BEAT_EVT: {
+     esp_a2d_connect(peer_bd_addr);
++#if 1
++    ESP_LOGW(BT_AV_TAG, "Reconnecting to peer %s", to_str(peer_bd_addr));
++    if (++btu_connecting_count >= 3) {
++      ESP_LOGW(BT_AV_TAG, "Reconnecting count exceeded: %d", btu_connecting_count);
++      ESP.restart();
++    }
++#endif
+     s_a2d_state = APP_AV_STATE_CONNECTING;
+     s_connecting_heatbeat_count = 0;
+     break;
+@@ -709,7 +852,11 @@
+ 
+ void BluetoothA2DPSource::bt_app_av_state_connecting_hdlr(uint16_t event,
+                                                           void *param) {
++#if 0
++  ESP_LOGW(BT_AV_TAG, "%s evt %d", __func__, event);
++#else
+   ESP_LOGD(BT_AV_TAG, "%s evt %d", __func__, event);
++#endif
+   esp_a2d_cb_param_t *a2d = NULL;
+ 
+   /* handle the events of intrest in connecting state */
+@@ -737,6 +884,10 @@
+     if (++s_connecting_heatbeat_count >= 2) {
+       s_a2d_state = APP_AV_STATE_UNCONNECTED;
+       s_connecting_heatbeat_count = 0;
++#if 0
++      ESP_LOGW(BT_AV_TAG, "s_connecting_heatbeat_count = %d", s_connecting_heatbeat_count);
++      ESP.restart();
++#endif
+     }
+     break;
+   // case ESP_A2D_REPORT_SNK_DELAY_VALUE_EVT: {
+@@ -893,10 +1044,12 @@
+   case ESP_AVRC_CT_METADATA_RSP_EVT:
+   case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
+   case ESP_AVRC_CT_REMOTE_FEATURES_EVT:
++#if 0 /* XXX */
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+   case ESP_AVRC_CT_GET_RN_CAPABILITIES_RSP_EVT:
+   case ESP_AVRC_CT_SET_ABSOLUTE_VOLUME_RSP_EVT: 
+ #endif
++#endif
+   {
+     bt_app_work_dispatch(ccall_bt_av_hdl_avrc_ct_evt, event, param,
+                          sizeof(esp_avrc_ct_cb_param_t), NULL);
+@@ -909,26 +1062,43 @@
+   }
+ }
+ 
++#if 0 /* XXX */
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+ 
+ void BluetoothA2DPSource::bt_av_volume_changed(void) {
++#if 1 /* XXX */
++  ESP_LOGW(BT_RC_CT_TAG, "bt_av_volume_changed() Debug1");
++#endif
+   if (esp_avrc_rn_evt_bit_mask_operation(ESP_AVRC_BIT_MASK_OP_TEST,
+                                          &s_avrc_peer_rn_cap,
+                                          ESP_AVRC_RN_VOLUME_CHANGE)) {
++#if 1 /* XXX */
++    esp_err_t rv =
++    esp_avrc_ct_send_register_notification_cmd(APP_RC_CT_TL_RN_VOLUME_CHANGE,
++                                               ESP_AVRC_RN_VOLUME_CHANGE, 0);
++    ESP_LOGW(BT_RC_CT_TAG, "bt_av_volume_changed() Debug2: %d", rv);
++#else
+     esp_avrc_ct_send_register_notification_cmd(APP_RC_CT_TL_RN_VOLUME_CHANGE,
+                                                ESP_AVRC_RN_VOLUME_CHANGE, 0);
++#endif
+   }
+ }
+ 
+ void BluetoothA2DPSource::bt_av_notify_evt_handler(
+     uint8_t event_id, esp_avrc_rn_param_t *event_parameter) {
+   ESP_LOGD(BT_RC_CT_TAG, "%s evt %d", __func__, event_id);
++#if 1 /* XXX */
++  ESP_LOGW(BT_RC_CT_TAG, "%s evt %d", __func__, event_id);
++#endif
+   switch (event_id) {
+   case ESP_AVRC_RN_VOLUME_CHANGE:
+     ESP_LOGI(BT_RC_CT_TAG, "Volume changed: %d", event_parameter->volume);
+     // limit the value to 127
+     uint8_t new_volume = std::min((int)event_parameter->volume, 0x7f);
+     ESP_LOGI(BT_RC_CT_TAG, "Set absolute volume: volume %d", new_volume);
++#if 1 /* XXX */
++    ESP_LOGW(BT_RC_CT_TAG, "Set absolute volume: volume %d", new_volume);
++#endif
+     esp_avrc_ct_send_set_absolute_volume_cmd(APP_RC_CT_TL_RN_VOLUME_CHANGE,
+                                              new_volume);
+     set_volume(new_volume);
+@@ -938,9 +1108,13 @@
+ }
+ 
+ #endif
++#endif /* XXX */
+ 
+ void BluetoothA2DPSource::bt_av_hdl_avrc_ct_evt(uint16_t event, void *p_param) {
+   ESP_LOGD(BT_RC_CT_TAG, "%s evt %d", __func__, event);
++#if 0 /* XXX */
++  ESP_LOGW(BT_RC_CT_TAG, "%s evt %d", __func__, event);
++#endif
+   esp_avrc_ct_cb_param_t *rc = (esp_avrc_ct_cb_param_t *)(p_param);
+ 
+   switch (event) {
+@@ -952,6 +1126,7 @@
+              rc->conn_stat.connected, bda[0], bda[1], bda[2], bda[3], bda[4],
+              bda[5]);
+ 
++#if 0 /* XXX */
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+     if (rc->conn_stat.connected) {
+       esp_avrc_ct_send_get_rn_capabilities_cmd(APP_RC_CT_TL_GET_CAPS);
+@@ -959,6 +1134,7 @@
+       s_avrc_peer_rn_cap.bits = 0;
+     }
+ #endif
++#endif /* XXX */
+     break;
+   }
+   /* when passthrough responsed, this event comes */
+@@ -980,10 +1156,12 @@
+   case ESP_AVRC_CT_CHANGE_NOTIFY_EVT: {
+     ESP_LOGI(BT_RC_CT_TAG, "AVRC event notification: %d",
+              rc->change_ntf.event_id);
++#if 0 /* XXX */
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+     bt_av_notify_evt_handler(rc->change_ntf.event_id,
+                              &rc->change_ntf.event_parameter);
+ #endif
++#endif /* XXX */
+     break;
+   }
+   /* when indicate feature of remote device, this event comes */
+@@ -993,6 +1171,7 @@
+     break;
+   }
+ 
++#if 0 /* XXX */
+ #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+   /* when get supported notification events capability of peer device, this
+    * event comes */
+@@ -1008,10 +1187,15 @@
+   case ESP_AVRC_CT_SET_ABSOLUTE_VOLUME_RSP_EVT: {
+     ESP_LOGI(BT_RC_CT_TAG, "Set absolute volume response: volume %d",
+              rc->set_volume_rsp.volume);
++#if 1 /* XXX */
++    ESP_LOGW(BT_RC_CT_TAG, "Set absolute volume response: volume %d",
++             rc->set_volume_rsp.volume);
++#endif
+     set_volume(rc->set_volume_rsp.volume);
+     break;
+   }
+ #endif
++#endif /* XXX */
+   /* other */
+   default: {
+     ESP_LOGW(BT_RC_CT_TAG, "%s unhandled event: %d", __func__, event);
+diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.h ESP32-A2DP/src/BluetoothA2DPSource.h
+--- ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.h	2025-05-05 15:28:15.862987500 +0900
++++ ESP32-A2DP/src/BluetoothA2DPSource.h	2025-01-13 02:00:49.313300200 +0900
+@@ -185,6 +185,12 @@
+       ssid_callback = callback;
+     }
+ 
++#if 1
++    int get_discovering_count() {
++      return discovering_count;
++    }
++#endif
++
+   protected:
+     music_data_channels_cb_t data_stream_channels_callback;
+     const char *dev_name = "ESP32_A2DP_SRC";
+@@ -212,6 +218,10 @@
+     int32_t sound_data_current_pos = 0;
+     bool has_sound_data_flag = false;
+ 
++#if 1
++    int discovering_count = 0;
++#endif
++
+     // initialization
+     bool nvs_init = true;
+     bool reset_ble = false;

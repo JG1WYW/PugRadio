@@ -1,0 +1,250 @@
+diff -ur ../../TMP_LIBS/arduino-libhelix/CMakeLists.txt arduino-libhelix/CMakeLists.txt
+--- ../../TMP_LIBS/arduino-libhelix/CMakeLists.txt	2025-05-05 15:31:11.934858500 +0900
++++ arduino-libhelix/CMakeLists.txt	2025-03-29 15:03:06.652027200 +0900
+@@ -1,7 +1,14 @@
+ cmake_minimum_required(VERSION 3.16)
+ 
++    # idf component
++    idf_component_register(
++        SRC_DIRS src/libhelix-mp3 src/utils src/libhelix-aac 
++        INCLUDE_DIRS src 
++        REQUIRES  espressif__arduino-esp32
++    )
++
+ # set the project name
+-project(arduino_helix)
++#project(arduino_helix)
+ 
+ # lots of warnings and all warnings as errors
+ ## add_compile_options(-Wall -Wextra )
+@@ -9,20 +16,20 @@
+ 
+ option(MP3_EXAMPLES "build examples" OFF)
+ 
+-file(GLOB_RECURSE SRC_LIST_C CONFIGURE_DEPENDS  "${PROJECT_SOURCE_DIR}/src/*.c" )
+-file(GLOB_RECURSE SRC_LIST_CPP CONFIGURE_DEPENDS  "${PROJECT_SOURCE_DIR}/src/*.cpp" )
++#file(GLOB_RECURSE SRC_LIST_C CONFIGURE_DEPENDS  "${PROJECT_SOURCE_DIR}/src/*.c" )
++#file(GLOB_RECURSE SRC_LIST_CPP CONFIGURE_DEPENDS  "${PROJECT_SOURCE_DIR}/src/*.cpp" )
+ 
+ # define libraries
+-add_library (arduino_helix ${SRC_LIST_C} ${SRC_LIST_CPP})
++#add_library (arduino_helix ${SRC_LIST_C} ${SRC_LIST_CPP})
+ 
+ # prevent compile errors
+-target_compile_options(arduino_helix PRIVATE -DUSE_DEFAULT_STDLIB)
++#target_compile_options(arduino_helix PRIVATE -DUSE_DEFAULT_STDLIB)
+ 
+ # define location for header files
+-target_include_directories(arduino_helix PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/libhelix-mp3 ${CMAKE_CURRENT_SOURCE_DIR}/src/libhelix-aac )
++#target_include_directories(arduino_helix PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/libhelix-mp3 ${CMAKE_CURRENT_SOURCE_DIR}/src/libhelix-aac )
+ 
+ # build examples
+ if(MP3_EXAMPLES)
+   add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/examples/output_mp3")
+   add_subdirectory( "${CMAKE_CURRENT_SOURCE_DIR}/examples/output_aac")
+-endif()
+\ No newline at end of file
++endif()
+diff -ur ../../TMP_LIBS/arduino-libhelix/src/AACDecoderHelix.h arduino-libhelix/src/AACDecoderHelix.h
+--- ../../TMP_LIBS/arduino-libhelix/src/AACDecoderHelix.h	2025-05-05 15:31:11.956290600 +0900
++++ arduino-libhelix/src/AACDecoderHelix.h	2025-04-06 01:30:33.520331700 +0900
+@@ -78,6 +78,9 @@
+   }
+ 
+  protected:
++#if 0
++  int first = 1;
++#endif
+   HAACDecoder decoder = nullptr;
+   AACDataCallback pcmCallback = nullptr;
+   AACInfoCallback infoCallback = nullptr;
+@@ -134,8 +137,15 @@
+                     p_caller_data);
+       } else {
+         // output to stream
++#if 0
++        if (first == 1 &&
++#else
+         if (info.sampRateOut != aacFrameInfo.sampRateOut &&
++#endif
+             infoCallback != nullptr) {
++#if 0
++          first = 0;
++#endif
+           infoCallback(info, p_caller_ref);
+         }
+ #if defined(ARDUINO) || defined(HELIX_PRINT)
+diff -ur ../../TMP_LIBS/arduino-libhelix/src/ConfigHelix.h arduino-libhelix/src/ConfigHelix.h
+--- ../../TMP_LIBS/arduino-libhelix/src/ConfigHelix.h	2025-05-05 15:31:11.960409200 +0900
++++ arduino-libhelix/src/ConfigHelix.h	2025-04-26 14:12:24.747947200 +0900
+@@ -11,10 +11,10 @@
+ 
+ // mp3
+ #ifndef MP3_MAX_OUTPUT_SIZE
+-#  define MP3_MAX_OUTPUT_SIZE 1024 * 5
++#  define MP3_MAX_OUTPUT_SIZE (1024 * 5)
+ #endif
+ #ifndef MP3_MAX_FRAME_SIZE
+-#  define MP3_MAX_FRAME_SIZE 1024 * 2
++#  define MP3_MAX_FRAME_SIZE (1024 * 2)
+ #endif
+ #ifndef MP3_MIN_FRAME_SIZE
+ #  define MP3_MIN_FRAME_SIZE 1024
+@@ -22,17 +22,23 @@
+ 
+ // aac
+ #ifndef AAC_MAX_OUTPUT_SIZE
+-#  define AAC_MAX_OUTPUT_SIZE 1024 * 8
++//#  define AAC_MAX_OUTPUT_SIZE (1024 * 5)  // cannot start
++#  define AAC_MAX_OUTPUT_SIZE (1024 * 8)
++//#  define AAC_MAX_OUTPUT_SIZE (1024 * 10)
++//#  define AAC_MAX_OUTPUT_SIZE (1024 * 5)
+ #endif
+ #ifndef AAC_MAX_FRAME_SIZE
+ #  define AAC_MAX_FRAME_SIZE 2100
++//#  define AAC_MAX_FRAME_SIZE 3200
++//#  define AAC_MAX_FRAME_SIZE (1024 * 2) // cannot start
+ #endif
+ #ifndef AAC_MIN_FRAME_SIZE
+ #  define AAC_MIN_FRAME_SIZE 1024
+ #endif
+ 
+ // Allocation: define allocator to be used
+-#define ALLOCATOR libhelix::AllocatorExt
++//#define ALLOCATOR libhelix::AllocatorExt
++#define ALLOCATOR libhelix::Allocator
+ 
+ // Logging: Activate/Deactivate logging
+ #if ! defined(HELIX_LOGGING_ACTIVE) && defined(ARDUINO)
+@@ -53,4 +59,4 @@
+ 
+ #ifndef HELIX_LOG_SIZE
+ #  define HELIX_LOG_SIZE 256
+-#endif
+\ No newline at end of file
++#endif
+Only in arduino-libhelix/src: ConfigHelix.h.ORG-20240705-0705
+Only in arduino-libhelix/src: ConfigHelix.h~
+diff -ur ../../TMP_LIBS/arduino-libhelix/src/MP3DecoderHelix.h arduino-libhelix/src/MP3DecoderHelix.h
+--- ../../TMP_LIBS/arduino-libhelix/src/MP3DecoderHelix.h	2025-05-05 15:31:11.962446500 +0900
++++ arduino-libhelix/src/MP3DecoderHelix.h	2025-04-04 01:32:15.750402700 +0900
+@@ -82,6 +82,9 @@
+   }
+ 
+  protected:
++#if 0
++  int first = 1;
++#endif
+   HMP3Decoder decoder = nullptr;
+   MP3DataCallback pcmCallback = nullptr;
+   MP3InfoCallback infoCallback = nullptr;
+@@ -144,7 +147,12 @@
+                     p_caller_data);
+       } else {
+         // output to stream
++#if 0
++        if (first == 1 && infoCallback != nullptr) {
++            first = 0;
++#else
+         if (info.samprate != mp3FrameInfo.samprate && infoCallback != nullptr) {
++#endif
+           infoCallback(info, p_caller_ref);
+         }
+ #if defined(ARDUINO) || defined(HELIX_PRINT)
+@@ -157,4 +165,4 @@
+   }
+ };
+ 
+-}  // namespace libhelix
+\ No newline at end of file
++}  // namespace libhelix
+diff -ur ../../TMP_LIBS/arduino-libhelix/src/libhelix-mp3/assembly.h arduino-libhelix/src/libhelix-mp3/assembly.h
+--- ../../TMP_LIBS/arduino-libhelix/src/libhelix-mp3/assembly.h	2025-05-05 15:31:11.975173600 +0900
++++ arduino-libhelix/src/libhelix-mp3/assembly.h	2025-01-13 02:00:58.902763500 +0900
+@@ -417,7 +417,7 @@
+ 	return (x >> n);
+ }
+ 
+-#elif defined(ARDUINO) || defined(__APPLE__) || defined(__unix__)
++#elif 1 || defined(ARDUINO) || defined(__APPLE__) || defined(__unix__)
+ 
+ static __inline int FASTABS(int x)
+ {
+diff -ur ../../TMP_LIBS/arduino-libhelix/src/libhelix-mp3/mp3common.h arduino-libhelix/src/libhelix-mp3/mp3common.h
+--- ../../TMP_LIBS/arduino-libhelix/src/libhelix-mp3/mp3common.h	2025-05-05 15:05:23.378679500 +0900
++++ arduino-libhelix/src/libhelix-mp3/mp3common.h	2025-01-13 02:00:58.886964400 +0900
+@@ -52,14 +52,16 @@
+ #define NGRANS_MPEG2	1
+ 
+ /* 11-bit syncword if MPEG 2.5 extensions are enabled */
+-/*
+ #define	SYNCWORDH		0xff
+ #define	SYNCWORDL		0xe0
++/*
+ */
+ 
+ /* 12-bit syncword if MPEG 1,2 only are supported */
++/*
+ #define	SYNCWORDH		0xff
+ #define	SYNCWORDL		0xf0
++*/
+ 
+ typedef struct _MP3DecInfo {
+ 	/* pointers to platform-specific data structures */
+diff -ur ../../TMP_LIBS/arduino-libhelix/src/utils/Allocator.h arduino-libhelix/src/utils/Allocator.h
+--- ../../TMP_LIBS/arduino-libhelix/src/utils/Allocator.h	2025-05-05 15:31:11.977198500 +0900
++++ arduino-libhelix/src/utils/Allocator.h	2025-03-31 20:19:40.233882100 +0900
+@@ -5,6 +5,7 @@
+ #ifdef ESP32
+ #  include "Arduino.h"
+ #endif
++#  include <ESP.h> /* XXX */
+ namespace libhelix {
+ 
+ /**
+@@ -64,6 +65,12 @@
+     void* result = do_allocate(size);
+     if (result == nullptr) {
+       LOG_HELIX(LogLevelHelix::Error,"Allocateation failed for %zu bytes", size);
++#if 1
++      LOG_HELIX(LogLevelHelix::Error,"(1)");
++      delay(1000);
++      //abort();
++      ESP.restart();
++#endif
+       while(1);
+     } else {
+       LOG_HELIX(LogLevelHelix::Debug,"Allocated %zu", size);
+@@ -99,6 +106,12 @@
+     if (result == nullptr) result = malloc(size);
+     if (result == nullptr) {
+       LOG_HELIX(LogLevelHelix::Error,"allocateation failed for %zu bytes", size);
++#if 1
++      LOG_HELIX(LogLevelHelix::Error,"(2)");
++      delay(1000);
++      //abort();
++      ESP.restart();
++#endif
+       while(true);
+     }
+     // initialize object
+@@ -124,6 +137,12 @@
+     result = ps_calloc(1, size);
+     if (result == nullptr) {
+       LOG_HELIX(LogLevelHelix::Error,"allocateation failed for %zu bytes", size);
++#if 1
++      LOG_HELIX(LogLevelHelix::Error,"(3)");
++      delay(1000);
++      //abort();
++      ESP.restart();
++#endif
+       while(true);
+     }
+     return result;
+@@ -135,4 +154,4 @@
+ // Define the default allocator
+ static AllocatorExt DefaultAllocator;
+ 
+-}  // namespace audio_tools
+\ No newline at end of file
++}  // namespace audio_tools
