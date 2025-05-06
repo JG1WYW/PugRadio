@@ -1,0 +1,44 @@
+diff --git a/components/bt/host/bluedroid/stack/btu/btu_hcif.c b/components/bt/host/bluedroid/stack/btu/btu_hcif.c
+index 52a13af88e..a55b70963d 100644
+--- a/components/bt/host/bluedroid/stack/btu/btu_hcif.c
++++ b/components/bt/host/bluedroid/stack/btu/btu_hcif.c
+@@ -636,6 +636,9 @@ static void btu_hcif_extended_inquiry_result_evt (UINT8 *p)
+ ** Returns          void
+ **
+ *******************************************************************************/
++#if 1
++int btu_connecting_count = 0;
++#endif
+ static void btu_hcif_connection_comp_evt (UINT8 *p)
+ {
+     UINT8       status;
+@@ -644,6 +647,10 @@ static void btu_hcif_connection_comp_evt (UINT8 *p)
+     UINT8       link_type;
+     UINT8       enc_mode;
+ 
++#if 1
++    btu_connecting_count = 0;
++#endif
++
+     STREAM_TO_UINT8    (status, p);
+     STREAM_TO_UINT16   (handle, p);
+     STREAM_TO_BDADDR   (bda, p);
+diff --git a/components/bt/host/bluedroid/stack/l2cap/l2c_link.c b/components/bt/host/bluedroid/stack/l2cap/l2c_link.c
+index 4b81b4b3b2..e088623094 100644
+--- a/components/bt/host/bluedroid/stack/l2cap/l2c_link.c
++++ b/components/bt/host/bluedroid/stack/l2cap/l2c_link.c
+@@ -1054,7 +1054,14 @@ void l2c_link_check_send_pkts (tL2C_LCB *p_lcb, tL2C_CCB *p_ccb, BT_HDR *p_buf)
+     ** This LCB will be served when receiving number of completed packet event.
+     */
+     if (l2cb.is_cong_cback_context) {
++#if 1
++        static int cong_count = 0;
++        if (++cong_count % 100 == 0) {
++          L2CAP_TRACE_ERROR("l2cab is_cong_cback_context: %d", cong_count);
++        }
++#else
+         L2CAP_TRACE_ERROR("l2cab is_cong_cback_context");
++#endif
+         return;
+     }
+ 
