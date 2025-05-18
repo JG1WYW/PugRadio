@@ -502,8 +502,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpRequest.h arduino-
    }
  };
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-audio-tools/src/AudioHttp/URLStream.h
---- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-05 15:44:02.811580700 +0900
-+++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-04-30 12:00:03.595921000 +0900
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-18 16:08:27.755766900 +0900
++++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-15 01:11:56.842035700 +0900
 @@ -48,6 +48,13 @@
    ~URLStream() {
      TRACED();
@@ -622,7 +622,21 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-au
      request.setClient(client);
  
      // set timeout
-@@ -334,35 +377,102 @@
+@@ -318,11 +361,13 @@
+       clientSecure->setHandshakeTimeout(handshakeTimeout);
+     }
+ 
++#if 0
+     // Performance optimization for ESP32
+     if (!is_power_save) {
+       esp_wifi_set_ps(WIFI_PS_NONE);
+     }
+ #endif
++#endif
+     return true;
+   }
+ 
+@@ -334,35 +379,102 @@
      // keep icy across redirect requests ?
      const char* icy = request.header().get("Icy-MetaData");
  
@@ -1042,7 +1056,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-01 00:03:19.225559300 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-15 00:44:38.071054700 +0900
 @@ -16,14 +16,31 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1311,7 +1325,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
      
          static void a2dp_state_callback(esp_a2d_connection_state_t state, void *caller){
-@@ -294,6 +460,33 @@
+@@ -294,6 +460,30 @@
                   is_a2dp_active = true;
              } 
              LOGW("==> state: %s", self->a2dp->to_str(state));
@@ -1328,11 +1342,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +              LOGW("Disconnected count: %d, Discovering count: %d", disconnected_count, self->a2dp_source->get_discovering_count());
 +              if (connection_state == ESP_A2D_CONNECTION_STATE_CONNECTED
 +                  || (self->a2dp_source->get_discovering_count() > 0 && disconnected_count >= 5)
-+                  ||  disconnected_count >= 50 /* every 10min */) {
++                  /*||  disconnected_count >= 50*/ /* every 10min */) {
 +                LOGW("Disconnected count exceeded: %d", disconnected_count);
-+#if 0
-+                esp_wifi_set_ps(WIFI_PS_NONE);
-+#endif
 +#if 1
 +                //abort();
 +                LOGW("Rebooting...");
@@ -1345,7 +1356,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
  
  
-@@ -302,14 +495,63 @@
+@@ -302,14 +492,63 @@
              int32_t result_len = 0;
              A2DPConfig config = A2DPStream_self->config;
  

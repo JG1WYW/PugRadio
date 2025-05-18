@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.30 (2025/04/30)"
+#define APP_VERSION "1.32 (2025/05/18)"
 
 #if 0 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -30,8 +30,8 @@
 BluetoothSerial SerialBT;
 static int bt_initialized = 0;
 
-//#define DEF_VOL "1.0"
-#define DEF_VOL "0.9"
+#define DEF_VOL "1.0"
+//#define DEF_VOL "0.9"
 
 void Serial_printf(const char *format, ...)
 {
@@ -91,7 +91,7 @@ const char *urls[] = {
 
   "https://npr-ice.streamguys1.com/live.mp3", // KRVS-HD3, WKCR-HD3, NPR News and Talk
 
-  "https://streams.kqed.org/kqedradio-pfs", // KQED, 32kbps, mono
+  "https://streams.kqed.org/kqedradio", // KQED, 32kbps, mono
   "https://playerservices.streamtheworld.com/api/livestream-redirect/KVPRFM.mp3", // Valley Public Radio (KVPR)
 
   //"https://streaming.azpm.org/kuaz128.mp3", // NPR 89.1 Arizona Public Media (48kHz,16bit,stereo)
@@ -867,6 +867,9 @@ void setup() {
   if (use_wifi == 1) {
     int status = WL_IDLE_STATUS;
     WiFi.begin(ssid, passwd);
+#if 0
+    esp_wifi_set_ps(WIFI_PS_NONE);
+#endif
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
