@@ -1056,7 +1056,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-15 00:44:38.071054700 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-20 19:58:00.844234900 +0900
 @@ -16,14 +16,31 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1342,7 +1342,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +              LOGW("Disconnected count: %d, Discovering count: %d", disconnected_count, self->a2dp_source->get_discovering_count());
 +              if (connection_state == ESP_A2D_CONNECTION_STATE_CONNECTED
 +                  || (self->a2dp_source->get_discovering_count() > 0 && disconnected_count >= 5)
-+                  /*||  disconnected_count >= 50*/ /* every 10min */) {
++                  ||  disconnected_count >= 50 /* every 10min */) {
 +                LOGW("Disconnected count exceeded: %d", disconnected_count);
 +#if 1
 +                //abort();

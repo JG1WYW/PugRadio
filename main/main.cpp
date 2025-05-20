@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.32 (2025/05/18)"
+#define APP_VERSION "1.34 (2025/05/20)"
 
 #if 0 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -1082,7 +1082,8 @@ void setup() {
 }
 
 #if 1
-#define PUSH_TIMEOUT 500 /* msec */
+//#define PUSH_TIMEOUT 500 /* msec */
+#define PUSH_TIMEOUT 1000 /* msec */
 int push_last_button = HIGH;
 unsigned long push_time = 0;
 int push_time_over  = 0;
