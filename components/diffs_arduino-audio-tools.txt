@@ -1056,8 +1056,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-20 19:58:00.844234900 +0900
-@@ -16,14 +16,31 @@
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-21 02:15:10.847902300 +0900
+@@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
  
@@ -1084,12 +1084,15 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +static int disconnected_count = 0;
 +//static char *device = nullptr;
 +static bool is_buffering = false;
++static int fade_count = 0;
++static unsigned long fade_start = 0;
++static float fade_volume = 0;
 +static int a2dp_rssi = -75;
 +#endif
  
  int32_t a2dp_stream_source_sound_data(Frame* data, int32_t len);
  void a2dp_stream_sink_sound_data(const uint8_t* data, uint32_t len);
-@@ -52,7 +69,11 @@
+@@ -52,7 +72,11 @@
          /// Delay in ms which is added to each write
          int delay_ms = 1;
          /// when a2dp source is active but has no data we generate silence data
@@ -1101,7 +1104,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
  };
  
  
-@@ -134,24 +155,56 @@
+@@ -134,24 +158,56 @@
              LOGI("Connecting to %s",cfg.name);
              a2dp_buffer.resize(cfg.buffer_size);
  
@@ -1158,7 +1161,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                      while(!a2dp_source->is_connected()){
                          LOGD("waiting for connection");
                          delay(1000);
-@@ -213,20 +266,49 @@
+@@ -213,20 +269,49 @@
  
          /// Writes the data into a temporary send buffer - where it can be picked up by the callback
          size_t write(const uint8_t* data, size_t len) override {   
@@ -1208,7 +1211,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                  }
              }
  
-@@ -235,7 +317,18 @@
+@@ -235,7 +320,18 @@
              LOGD("write %d -> %d", len, result);
              if (config.mode == TX_MODE){
                  // give the callback a chance to retrieve the data
@@ -1228,7 +1231,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
              }
              return result;
          }
-@@ -247,8 +340,31 @@
+@@ -247,8 +343,31 @@
                  return 0;
              }
              LOGD("readBytes %d", len);
@@ -1260,7 +1263,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
              return result;
          }
         
-@@ -273,6 +389,50 @@
+@@ -273,6 +392,50 @@
              return true;
          }
  
@@ -1311,7 +1314,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
      protected:
          A2DPConfig config;
          BluetoothA2DPSource *a2dp_source = nullptr;
-@@ -284,7 +444,13 @@
+@@ -284,7 +447,13 @@
          static bool detected_device(const char* ssid, esp_bd_addr_t address, int rssi){
              LOGW("found Device: %s rssi: %d", ssid, rssi);
              //filter out weak signals
@@ -1325,7 +1328,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
      
          static void a2dp_state_callback(esp_a2d_connection_state_t state, void *caller){
-@@ -294,6 +460,30 @@
+@@ -294,6 +463,30 @@
                   is_a2dp_active = true;
              } 
              LOGW("==> state: %s", self->a2dp->to_str(state));
@@ -1356,7 +1359,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
  
  
-@@ -302,14 +492,63 @@
+@@ -302,14 +495,93 @@
              int32_t result_len = 0;
              A2DPConfig config = A2DPStream_self->config;
  
@@ -1383,6 +1386,17 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +                  }
 +                }
 +#endif
++#if 0
++                fade_start++;
++                if (fade_start > 5000) {
++                  fade_start = 0;
++
++                  while (int len = a2dp_buffer.available()) {
++                      uint8_t* data[1024];
++                      a2dp_buffer.readArray((uint8_t*)data, min(len, 1024));
++                  }
++                }
++#endif
 +#if 1
 +                //if (is_buffering && a2dp_buffer.available() < len) {
 +                  //LOGW("a2dp buf: %d", a2dp_buffer.available());
@@ -1395,6 +1409,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +                  LOGW("a2dp buffered: %d", a2dp_buffer.available());
 +
 +                  is_buffering = false;
++                  fade_count = 44100 / 2; /* assuming 500msec */
++                  fade_volume = 0;
 +                }
 +                if (is_buffering || a2dp_buffer.available() < len) {
 +                  if (is_buffering == false) {
@@ -1407,6 +1423,23 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +#endif
                  result_len = a2dp_buffer.readArray((uint8_t*)data, len);
 +                //LOGW("a2dp: %d -> %d", len, result_len);   
++#if 1
++                if (fade_count > 0 && result_len > 0) {
++                  int16_t *data16 = (int16_t *)data;
++                  float delta = 1.0 / (44100 / 2);
++                  //LOGW("fade_vol: %f", fade_volume);
++                  //LOGW("fade_len: %d", result_len);
++                  for (int j = 0 ; fade_count > 0 && j < result_len / 2 ; j += 2){
++                    data16[j] = (int16_t)(data16[j] * fade_volume);
++                    data16[j+1] = (int16_t)(data16[j+1] * fade_volume);
++                    fade_volume += delta;
++                    if (fade_volume > 1.0f) {
++                      fade_volume = 1.0f;
++                    }
++                    fade_count--;
++                  }
++                }
++#endif
 +#if 1
 +                if ((result_len == 0 || result_len < 0) && is_buffering == false) {
 +                    LOGW("buffering");
@@ -1445,7 +1478,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h ardu
 +} // namespace
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino-audio-tools/src/AudioTools/AudioPlayer.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-05 15:44:03.153797900 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-04-20 15:27:22.990106000 +0900
++++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-30 12:59:00.270623700 +0900
 @@ -13,6 +13,10 @@
  #include "AudioTools/Fade.h"
  #include "AudioTools/StreamCopy.h"
@@ -1505,7 +1538,19 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
        this->volume_out.setOutput(fade);
        out_decoding.setOutput(&volume_out);
        out_decoding.setDecoder(p_decoder);
-@@ -171,6 +201,9 @@
+@@ -160,7 +190,11 @@
+     }
+ 
+     // take definition from source
++#if 1
++    // not allow autonext
++#else
+     autonext = p_source->isAutoNext();
++#endif
+ 
+     // initial audio info for fade from output when not defined yet
+     setupFade();
+@@ -171,6 +205,9 @@
      meta_out.begin();
  
      if (index >= 0) {
@@ -1515,7 +1560,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
        p_input_stream = p_source->selectStream(index);
        if (p_input_stream != nullptr) {
          if (meta_active) {
-@@ -211,8 +244,17 @@
+@@ -211,8 +248,17 @@
  
    /// (Re)defines the decoder
    void setDecoder(AudioDecoder &decoder) {
@@ -1533,7 +1578,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    }
  
    /// (Re)defines the notify
-@@ -227,10 +269,28 @@
+@@ -227,10 +273,28 @@
    /// Updates the audio info in the related objects
    virtual void setAudioInfo(AudioInfo info) override {
      TRACED();
@@ -1562,7 +1607,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      // notifiy volume
      volume_out.setAudioInfo(info);
      fade.setAudioInfo(info);
-@@ -264,6 +324,9 @@
+@@ -264,6 +328,9 @@
      writeEnd();
      stream_increment = offset >= 0 ? 1 : -1;
      active = setStream(p_source->nextStream(offset));
@@ -1572,7 +1617,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      return active;
    }
  
-@@ -296,14 +359,33 @@
+@@ -296,14 +363,33 @@
  
    /// start selected input stream
    virtual bool setStream(Stream *input) {
@@ -1606,7 +1651,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      return p_input_stream != nullptr;
    }
  
-@@ -357,6 +439,12 @@
+@@ -357,6 +443,12 @@
    /// Defines the wait time in ms if the target output is full
    virtual void setDelayIfOutputFull(int delayMs) { delay_if_full = delayMs; }
  
@@ -1619,7 +1664,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    virtual size_t copy() {
      return copy(copier.bufferSize());
    }
-@@ -473,6 +561,9 @@
+@@ -473,6 +565,9 @@
    float current_volume = -1.0f; // illegal value which will trigger an update
    int delay_if_full = 100;
    bool is_auto_fade = true;
@@ -1629,7 +1674,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
  
    void setupFade() {
      if (p_final_print != nullptr) {
-@@ -480,6 +571,9 @@
+@@ -480,6 +575,9 @@
      } else if (p_final_stream != nullptr) {
        fade.setAudioInfo(p_final_stream->audioInfo());
      }
@@ -1639,7 +1684,21 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    }
  
    virtual void moveToNextFileOnTimeout() {
-@@ -507,10 +601,14 @@
+@@ -491,7 +589,13 @@
+       if (is_auto_fade)
+         fade.setFadeInActive(true);
+       if (autonext) {
++#if 1
++        LOGW("-> timeout - moving by %d", stream_increment);
++        delay(1000);
++        abort();
++#else
+         LOGI("-> timeout - moving by %d", stream_increment);
++#endif
+         // open next stream
+         if (!next(stream_increment)) {
+           LOGD("stream is null");
+@@ -507,10 +611,14 @@
      // end silently
      TRACEI();
      if (is_auto_fade) {
@@ -1656,7 +1715,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      // continue
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioSource.h arduino-audio-tools/src/AudioTools/AudioSource.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioSource.h	2025-05-05 15:44:03.163984000 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioSource.h	2025-04-14 22:00:32.231116800 +0900
++++ arduino-audio-tools/src/AudioTools/AudioSource.h	2025-05-30 10:51:21.085118900 +0900
 @@ -184,8 +184,24 @@
              LOGI("url array out of limits: %d -> %d", idx, pos);
          }

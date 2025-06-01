@@ -11,10 +11,14 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.34 (2025/05/20)"
+#define APP_VERSION "1.40 (2025/06/02)"
 
 #if 0 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
+#endif
+
+#if 1 /* 1 if enabling Radio like BT */
+#define BT_RADIO
 #endif
 
 #ifdef  BT_WIFI_ETHER
@@ -30,8 +34,9 @@
 BluetoothSerial SerialBT;
 static int bt_initialized = 0;
 
-#define DEF_VOL "1.0"
+//#define DEF_VOL "1.0"
 //#define DEF_VOL "0.9"
+#define DEF_VOL "0.8" // to prevent sound cracking on D-109
 
 void Serial_printf(const char *format, ...)
 {
@@ -505,11 +510,24 @@ void Serial_print_config()
     Serial_printf("\r\n");
 }
 
+#include "esp_mac.h"
+
+uint8_t macaddr_wifi[8];
+uint8_t macaddr_eth[8];
+uint8_t macaddr_bt[8];
+
+#define MACADDR_DIGITS(p)  p[0], p[1], p[2], p[3], p[4], p[5]
+
 void setup() {
   Serial.begin(115200);
 
+  esp_read_mac(macaddr_wifi, ESP_MAC_WIFI_STA);
+  esp_read_mac(macaddr_eth,  ESP_MAC_ETH);
+  esp_read_mac(macaddr_bt,   ESP_MAC_BT);
+
   Serial.printf("\r\n************************************************************************\r\n\r\n");
   Serial.printf("  Welcome to Pug Radio!!\ " FEATURE " Ver. %s\r\n", APP_VERSION);
+  Serial.printf("  Wi-Fi MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_wifi));
   Serial.printf("\r\n************************************************************************\r\n\r\n");
 
 #if 0
@@ -633,17 +651,18 @@ void setup() {
 
     Serial_printf("\r\n************************************************************************\r\n\r\n");
     Serial.printf("  Welcome to Pug Radio!!\ " FEATURE " Ver. %s\r\n", APP_VERSION);
+    Serial.printf("  Wi-Fi MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_wifi));
     Serial_printf("Setup mode. Please input values.\r\n");
     Serial_printf("\r\n************************************************************************\r\n\r\n");
 
-#ifdef BT_WIFI_ETHER
+#ifdef BT_RADIO
     Serial_printf("BT (%s) [comma separated BT names, or \"any\" when any is OK]: ", bt);
     bt = read_serial(bt_buf, BT_BUF_SIZE, bt);
 #endif
 
-#ifdef BT_WIFI_ETHER
+#ifdef BT_RADIO
     Serial_printf("PAIRING (%s) [Y/n]: ", pairing);
-    pairing = read_serial(pairing, PAIRING_BUF_SIZE, pairing);
+    pairing = read_serial(pairing_buf, PAIRING_BUF_SIZE, pairing);
     if (pairing[0] == 'n' || pairing[0] == 'N') {
       pairing = "no";
     } else {
@@ -651,7 +670,7 @@ void setup() {
     }
 #endif
 
-#ifdef BT_WIFI_ETHER
+#ifdef BT_RADIO
     Serial_printf("RSSI (%s) [more than -75]: ", rssi);
     rssi = read_serial(rssi_buf, RSSI_BUF_SIZE, rssi);
     if (-75 > atoi(rssi) || atoi(rssi) >= 0) {
@@ -784,6 +803,14 @@ void setup() {
     use_ether = 1;
   }
 #endif
+
+  Serial.printf("Wi-Fi MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_wifi));
+
+  if (use_ether) {
+    Serial.printf("Ether MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_eth));
+  }
+
+  Serial.printf("Bluetooth MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_bt));
 
 //#ifndef USE_ETHER
 //  if (use_wifi) {
@@ -1044,8 +1071,9 @@ void setup() {
   //bool rv = player.begin();
   if (rv == false) {
     Serial.println("Starting Audio Player failed.");
-    //Serial.println("Rebooting...");
-    //ESP.restart();
+    Serial.println("Rebooting...");
+    delay(1000);
+    ESP.restart();
   }
 #if 0
   while (rv == false) {
@@ -1161,9 +1189,17 @@ void loop() {
   //extern int push_time_over;
   //extern int push_count;
 
+  if (!player.isActive()) {
+    Serial.printf("Audio Player is inactive\r\n");
+    Serial.printf("Rebooting...\r\n");
+    delay(1000);
+    ESP.restart();
+  }
+
   int press_count = push_button_check();
 
-  if (press_count || !player.isActive()) {
+  //if (press_count || !player.isActive()) {
+  if (press_count) {
     if (press_count == 0 || press_count == 1) {
       // 0 means "player is not active"
 
