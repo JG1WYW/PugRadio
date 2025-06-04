@@ -1,0 +1,69 @@
+/*
+ * Pug Radio!!
+ * Author: Tomio NARITA <nrt@ff.iij4u.or.jp>
+ * License: GNU General Public License v3.0
+ *
+ * Powered by Arduino Audio Tools by Phil Schatzmann (pschatzmann)
+ *   https://github.com/pschatzmann/arduino-audio-tools
+ *   https://github.com/pschatzmann/arduino-libhelix
+ *   https://github.com/pschatzmann/ESP32-A2DP
+ * Also,
+ *   https://github.com/Networking-for-Arduino/EthernetESP32
+ */
+
+
+COMPONENTS
+~~~~~~~~~~
+
+cd PugRadio/component
+
+git clone https://github.com/pschatzmann/arduino-audio-tools
+cd arduino-audio-tools
+git checkout b2797d2ff060148dd280d17aa7f24ecb76f9b5b7
+patch -p4 < ../diffs_arduino-audio-tools.txt
+
+git clone https://github.com/pschatzmann/arduino-libhelix
+cd arduino-libhelix
+git checkout 5b20cc13935ddcc8447a119108ac81fba569a619
+patch -p4 < ../diffs_arduino-libhelix.txt
+
+git clone https://github.com/pschatzmann/ESP32-A2DP
+cd ESP32-A2DP
+git checkout 7ca18517ffb7c03bbf36abfa2e860da4f685cdd1
+patch -p4 < ../diffs_ESP32-A2DP.txt
+
+git clone https://github.com/Networking-for-Arduino/EthernetESP32
+cd EthernetESP32
+git checkout 7d55b46bf1d8130598ec549a61e414af77cabcb8
+
+
+ESP-IDF
+~~~~~~~
+
+I'm using ESP-IDF 5.1.4
+
+# git clone https://github.com/espressif/esp-idf.git
+# git checkout d7b0a45ddbddbac53afb4fc28168f9f9259dbb79
+
+cd component
+git clone https://github.com/espressif/arduino-esp32.git arduino
+cd arduino
+git checkout 614c72b4d3e9fd04dcccfe313bb2353b3b0eea46
+patch -p2 < ../PugRadio/components/diffs_bt.txt
+
+will fail due to the mismatch of line ends between LF and CR LF.
+Sorry, please remove those CRs. After removing CRs, the patch applied successfully.
+
+
+HOW TO BUILD PUG RADIO
+~~~~~~~~~~~~~~~~~~~~~~
+
+cd PugRadio
+
+idf.py reconfigure
+idf.py build
+idf.py -p (PORT) flash
+
+
+Happy listening to Pug Radio!!
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
