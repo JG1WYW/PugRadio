@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.40 (2025/06/02)"
+#define APP_VERSION "1.41 (2025/06/07)"
 
 #if 0 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -897,9 +897,16 @@ void setup() {
 #if 0
     esp_wifi_set_ps(WIFI_PS_NONE);
 #endif
+    int wait_count = 0;
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
+      if (++wait_count > 60) { // 30sec
+        Serial.println("WiFi connection failed.");
+        Serial.println("Rebooting...");
+        delay(1000);
+        ESP.restart();
+      }
     }
     Serial.println(".");
     Serial.println("WiFi connected.");
