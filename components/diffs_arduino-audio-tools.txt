@@ -1056,7 +1056,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-06-07 14:12:30.677682000 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-06-08 14:21:19.161470000 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1175,8 +1175,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                  && config.startup_logic == StartWhenBufferFull
 +#if 1
 +                //&& a2dp_buffer.available() >= a2dp_buffer.size() * 7 / 8){
-+                && a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4){
-+                //&& a2dp_buffer.available() >= a2dp_buffer.size() / 2){
++                //&& a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4){
++                && a2dp_buffer.available() >= a2dp_buffer.size() / 2){
 +                //&& a2dp_buffer.available() >= 2 * 44100){
 +#else
                  && a2dp_buffer.available() >= 0.8f * a2dp_buffer.size()){
@@ -1217,8 +1217,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                  // give the callback a chance to retrieve the data
 -                delay(config.delay_ms);
 +#if 0
-+                if (a2dp_buffer.available() >= a2dp_buffer.size() / 2) {
 +                //if (a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4) {
++                if (a2dp_buffer.available() >= a2dp_buffer.size() / 2) {
 +                  yield();
 +                  //delay(config.delay_ms);
 +                }
@@ -1360,7 +1360,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
  
  
-@@ -302,14 +496,93 @@
+@@ -302,14 +496,94 @@
              int32_t result_len = 0;
              A2DPConfig config = A2DPStream_self->config;
  
@@ -1404,7 +1404,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +                  //yield();
 +                  //delay(config.delay_ms);
 +                //}
-+                if (is_buffering && a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4) {
++                //if (is_buffering && a2dp_buffer.available() >= a2dp_buffer.size() * 3 / 4) {
++                if (is_buffering && a2dp_buffer.available() >= a2dp_buffer.size() / 2) {
 +//                if (is_buffering && a2dp_buffer.available() >= 0.8f * a2dp_buffer.size()) {
 +                //if (is_buffering && a2dp_buffer.available() >= len) {
 +                  LOGW("a2dp buffered: %d", a2dp_buffer.available());
@@ -1726,13 +1727,13 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      // continue
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioSource.h arduino-audio-tools/src/AudioTools/AudioSource.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioSource.h	2025-05-05 15:44:03.163984000 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioSource.h	2025-06-07 15:05:16.311583700 +0900
++++ arduino-audio-tools/src/AudioTools/AudioSource.h	2025-06-08 14:04:49.773730800 +0900
 @@ -163,7 +163,11 @@
          this->urlArray = urlArray;
          this->max = N;
          this->pos = startPos - 1;
 +#if 1
-+        this->timeout_auto_next_value = 10000; /* 44.1kHz * 16bit * 2ch / 2MB */
++        this->timeout_auto_next_value = 10000; /* 10s = 44.1kHz * 16bit * 2ch / 2MB */
 +#else
          this->timeout_auto_next_value = 20000;
 +#endif

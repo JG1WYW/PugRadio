@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.41 (2025/06/07)"
+#define APP_VERSION "1.42 (2025/06/08)"
 
 #if 0 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -329,7 +329,7 @@ int write_cfg(char *cfg_file, char *buf)
 char *read_serial(char *buf, int buf_len, char *default_value)
 {
   int idx = 0;
-#define SERIAL_BUF_SIZE 128
+#define SERIAL_BUF_SIZE 256
   char serial_buf[SERIAL_BUF_SIZE];
   char *ptr = default_value;
 
@@ -465,7 +465,7 @@ static char *pairing = "yes", pairing_buf[PAIRING_BUF_SIZE];
 #define DEF_RSSI "-75"
 static char *rssi = DEF_RSSI, rssi_buf[RSSI_BUF_SIZE];
 
-#define URL_BUF_SIZE 128
+#define URL_BUF_SIZE 256
 #define URL_NUM (sizeof(urls) / sizeof(char *))
 static char *urlp[URL_NUM], url_buf[URL_NUM][URL_BUF_SIZE];
 
@@ -778,7 +778,7 @@ void setup() {
   Serial_print_config();
 
 #if 1
-#define URL_BUF_SIZE 128
+//#define URL_BUF_SIZE 128
   for (int i = 0 ; i < URL_NUM ; i++) {
     ((char **)urls)[i] = urlp[i];
   }
@@ -901,7 +901,7 @@ void setup() {
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
-      if (++wait_count > 60) { // 30sec
+      if (++wait_count > 20) { // 10sec
         Serial.println("WiFi connection failed.");
         Serial.println("Rebooting...");
         delay(1000);
