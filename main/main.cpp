@@ -1033,9 +1033,9 @@ void setup() {
   //cfg.buffer_size = 1024 * 256;
   //cfg.buffer_size = 1024 * 512; // 512KB
   //cfg.buffer_size = 1024 * 1024 * 1; // 1MB
-  cfg.buffer_size = 1024 * 1024 * 2; // 2MB
+  //cfg.buffer_size = 1024 * 1024 * 2; // 2MB
   //cfg.buffer_size = 1024 * 1024 * 5 / 2; // 2.5MB
-  //cfg.buffer_size = 1024 * 1024 * 3; // 3MB (larger buffer especially for AAC)
+  cfg.buffer_size = 1024 * 1024 * 3; // 3MB (larger buffer especially for AAC)
 #endif /* BUF_16KB */
   //cfg.buffer_size = 1024 * 20; // too many putu putu without underrun
   //cfg.buffer_size = 1024 * 24; // badly worked on+off
