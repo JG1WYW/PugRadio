@@ -503,7 +503,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpRequest.h arduino-
  };
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-audio-tools/src/AudioHttp/URLStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-18 16:08:27.755766900 +0900
-+++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-15 01:11:56.842035700 +0900
++++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-06-12 07:00:35.160601500 +0900
 @@ -48,6 +48,13 @@
    ~URLStream() {
      TRACED();
@@ -677,7 +677,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-au
 +        clear(); // prevents memory leak
 +#endif
          Client* p_client = &getClient(url.isSecure());
-+#if 1 /* XXX */
++#if 0 /* XXX */
 +        //LOGE("Stopping client");
 +#if 0
 +        //end();

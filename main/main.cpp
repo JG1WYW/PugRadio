@@ -1266,7 +1266,7 @@ void loop() {
         //rv = player.next();
         Serial.printf("Play index = %d\r\n", playing_idx);
         rv = player.setIndex(playing_idx);
-        Serial.printf("Result: %d\r\n", rv);
+        //Serial.printf("Result: %d\r\n", rv);
         if (rv != 1) {
           if (++playing_idx >= URL_NUM)
             playing_idx = 0;
