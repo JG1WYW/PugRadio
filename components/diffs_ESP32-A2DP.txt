@@ -12,7 +12,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/CMakeLists.txt ESP32-A2DP/CMakeLists.txt
  target_compile_options(${COMPONENT_LIB} PUBLIC -DA2DP_LEGACY_I2S_SUPPORT=1 -DA2DP_I2S_AUDIOTOOLS=0 -Wno-error -Wno-format -fpermissive)
 diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/BluetoothA2DPSource.cpp
 --- ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp	2025-05-05 15:28:15.861972600 +0900
-+++ ESP32-A2DP/src/BluetoothA2DPSource.cpp	2025-01-13 21:35:18.580221100 +0900
++++ ESP32-A2DP/src/BluetoothA2DPSource.cpp	2025-06-11 20:43:17.519553000 +0900
 @@ -14,6 +14,9 @@
  // Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
  
@@ -144,7 +144,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
    switch (event) {
    case ESP_BT_GAP_DISC_RES_EVT: {
      filter_inquiry_scan_result(param);
-@@ -463,16 +522,52 @@
+@@ -463,16 +522,56 @@
      if (param->disc_st_chg.state == ESP_BT_GAP_DISCOVERY_STOPPED) {
        if (s_a2d_state == APP_AV_STATE_DISCOVERED) {
          s_a2d_state = APP_AV_STATE_CONNECTING;
@@ -163,6 +163,10 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
 +        if (s_a2d_state == APP_AV_STATE_CONNECTED) {
 +          ESP_LOGW(BT_AV_TAG, "Device already connected. Ignoring it...");
 +          break;
++        }
++        if (++discovery_failed_count >= 20) {
++          ESP_LOGW(BT_AV_TAG, "Device discovery failed (%d), rebooting...", discovery_failed_count);
++          ESP.restart();
 +        }
 +        //static int discovery_failed = 0;
 +        //if (0 && ++discovery_failed >= 100) {
@@ -190,14 +194,14 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
 +      discovering_count = 1;
 +#endif
 +#if 1
-+      ESP_LOGW(BT_AV_TAG, "Discovery started.");
++      ESP_LOGW(BT_AV_TAG, "Discovery started. (%d)", discovery_failed_count);
 +#else
        ESP_LOGI(BT_AV_TAG, "Discovery started.");
 +#endif
      }
      break;
    }
-@@ -531,6 +626,7 @@
+@@ -531,6 +630,7 @@
      esp_bt_gap_ssp_confirm_reply(param->cfm_req.bda, true);
      break;
  
@@ -205,7 +209,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
  #if ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(4, 4, 4)
    case ESP_BT_GAP_ACL_CONN_CMPL_STAT_EVT:
      ESP_LOGI( BT_AV_TAG,"ESP_BT_GAP_ACL_CONN_CMPL_STAT_EVT");
-@@ -541,6 +637,7 @@
+@@ -541,6 +641,7 @@
               param->mode_chg.mode);
      break;
  #endif
@@ -213,7 +217,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
  
    default: {
      ESP_LOGI(BT_AV_TAG, "event: %d", event);
-@@ -550,8 +647,16 @@
+@@ -550,8 +651,16 @@
    return;
  }
  
@@ -230,7 +234,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
  
    switch (event) {
    /* when stack up worked, this event comes */
-@@ -565,12 +670,14 @@
+@@ -565,12 +674,14 @@
      esp_avrc_ct_init();
      esp_avrc_ct_register_callback(ccall_bt_app_rc_ct_cb);
  
@@ -245,7 +249,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
  
      esp_a2d_source_init();
      esp_a2d_register_callback(&ccall_bt_app_a2d_cb);
-@@ -581,15 +688,31 @@
+@@ -581,15 +692,32 @@
      //esp_bt_gap_set_scan_mode(ESP_BT_NON_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
      set_scan_mode_connectable(false);
      if (reconnect_status == AutoReconnect && has_last_connection()) {
@@ -259,6 +263,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      } else {
  
 +#if 1
++      discovery_failed_count = 0;
 +      ESP_LOGW(BT_AV_TAG, "Starting device discovery...");
 +#else
        ESP_LOGI(BT_AV_TAG, "Starting device discovery...");
@@ -277,7 +282,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      }
      /* create and start heart beat timer */
        int tmr_id = 0;
-@@ -652,12 +775,25 @@
+@@ -652,12 +780,25 @@
  }
  
  void BluetoothA2DPSource::bt_app_av_sm_hdlr(uint16_t event, void *param) {
@@ -303,7 +308,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
    case APP_AV_STATE_DISCOVERED:
      break;
    case APP_AV_STATE_UNCONNECTED:
-@@ -691,6 +827,13 @@
+@@ -691,6 +832,13 @@
      break;
    case BT_APP_HEART_BEAT_EVT: {
      esp_a2d_connect(peer_bd_addr);
@@ -317,7 +322,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      s_a2d_state = APP_AV_STATE_CONNECTING;
      s_connecting_heatbeat_count = 0;
      break;
-@@ -709,7 +852,11 @@
+@@ -709,7 +857,11 @@
  
  void BluetoothA2DPSource::bt_app_av_state_connecting_hdlr(uint16_t event,
                                                            void *param) {
@@ -329,7 +334,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
    esp_a2d_cb_param_t *a2d = NULL;
  
    /* handle the events of intrest in connecting state */
-@@ -737,6 +884,10 @@
+@@ -737,6 +889,10 @@
      if (++s_connecting_heatbeat_count >= 2) {
        s_a2d_state = APP_AV_STATE_UNCONNECTED;
        s_connecting_heatbeat_count = 0;
@@ -340,7 +345,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      }
      break;
    // case ESP_A2D_REPORT_SNK_DELAY_VALUE_EVT: {
-@@ -893,10 +1044,12 @@
+@@ -893,10 +1049,12 @@
    case ESP_AVRC_CT_METADATA_RSP_EVT:
    case ESP_AVRC_CT_CHANGE_NOTIFY_EVT:
    case ESP_AVRC_CT_REMOTE_FEATURES_EVT:
@@ -353,7 +358,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
    {
      bt_app_work_dispatch(ccall_bt_av_hdl_avrc_ct_evt, event, param,
                           sizeof(esp_avrc_ct_cb_param_t), NULL);
-@@ -909,26 +1062,43 @@
+@@ -909,26 +1067,43 @@
    }
  }
  
@@ -397,7 +402,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      esp_avrc_ct_send_set_absolute_volume_cmd(APP_RC_CT_TL_RN_VOLUME_CHANGE,
                                               new_volume);
      set_volume(new_volume);
-@@ -938,9 +1108,13 @@
+@@ -938,9 +1113,13 @@
  }
  
  #endif
@@ -411,7 +416,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
    esp_avrc_ct_cb_param_t *rc = (esp_avrc_ct_cb_param_t *)(p_param);
  
    switch (event) {
-@@ -952,6 +1126,7 @@
+@@ -952,6 +1131,7 @@
               rc->conn_stat.connected, bda[0], bda[1], bda[2], bda[3], bda[4],
               bda[5]);
  
@@ -419,7 +424,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
      if (rc->conn_stat.connected) {
        esp_avrc_ct_send_get_rn_capabilities_cmd(APP_RC_CT_TL_GET_CAPS);
-@@ -959,6 +1134,7 @@
+@@ -959,6 +1139,7 @@
        s_avrc_peer_rn_cap.bits = 0;
      }
  #endif
@@ -427,7 +432,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      break;
    }
    /* when passthrough responsed, this event comes */
-@@ -980,10 +1156,12 @@
+@@ -980,10 +1161,12 @@
    case ESP_AVRC_CT_CHANGE_NOTIFY_EVT: {
      ESP_LOGI(BT_RC_CT_TAG, "AVRC event notification: %d",
               rc->change_ntf.event_id);
@@ -440,7 +445,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      break;
    }
    /* when indicate feature of remote device, this event comes */
-@@ -993,6 +1171,7 @@
+@@ -993,6 +1176,7 @@
      break;
    }
  
@@ -448,7 +453,7 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
  #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
    /* when get supported notification events capability of peer device, this
     * event comes */
-@@ -1008,10 +1187,15 @@
+@@ -1008,10 +1192,15 @@
    case ESP_AVRC_CT_SET_ABSOLUTE_VOLUME_RSP_EVT: {
      ESP_LOGI(BT_RC_CT_TAG, "Set absolute volume response: volume %d",
               rc->set_volume_rsp.volume);
@@ -466,8 +471,8 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.cpp ESP32-A2DP/src/Bl
      ESP_LOGW(BT_RC_CT_TAG, "%s unhandled event: %d", __func__, event);
 diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.h ESP32-A2DP/src/BluetoothA2DPSource.h
 --- ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.h	2025-05-05 15:28:15.862987500 +0900
-+++ ESP32-A2DP/src/BluetoothA2DPSource.h	2025-01-13 02:00:49.313300200 +0900
-@@ -185,6 +185,12 @@
++++ ESP32-A2DP/src/BluetoothA2DPSource.h	2025-06-11 19:39:28.151121200 +0900
+@@ -185,6 +185,16 @@
        ssid_callback = callback;
      }
  
@@ -475,17 +480,22 @@ diff -ur ../../TMP_LIBS/ESP32-A2DP/src/BluetoothA2DPSource.h ESP32-A2DP/src/Blue
 +    int get_discovering_count() {
 +      return discovering_count;
 +    }
++
++    int get_discovery_failed_count() {
++      return discovery_failed_count;
++    }
 +#endif
 +
    protected:
      music_data_channels_cb_t data_stream_channels_callback;
      const char *dev_name = "ESP32_A2DP_SRC";
-@@ -212,6 +218,10 @@
+@@ -212,6 +222,11 @@
      int32_t sound_data_current_pos = 0;
      bool has_sound_data_flag = false;
  
 +#if 1
 +    int discovering_count = 0;
++    int discovery_failed_count = 0;
 +#endif
 +
      // initialization
