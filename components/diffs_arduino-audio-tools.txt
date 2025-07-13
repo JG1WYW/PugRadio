@@ -503,7 +503,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpRequest.h arduino-
  };
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-audio-tools/src/AudioHttp/URLStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-18 16:08:27.755766900 +0900
-+++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-06-12 07:00:35.160601500 +0900
++++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-07-13 01:15:14.407317100 +0900
 @@ -48,6 +48,13 @@
    ~URLStream() {
      TRACED();
@@ -1056,7 +1056,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-06-11 20:45:35.435086500 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-07-12 13:28:24.718223900 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1211,7 +1211,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                  }
              }
  
-@@ -235,7 +320,18 @@
+@@ -235,7 +320,19 @@
              LOGD("write %d -> %d", len, result);
              if (config.mode == TX_MODE){
                  // give the callback a chance to retrieve the data
@@ -1225,13 +1225,14 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +#else
 +                /* 2025/03/07 delay -> yield */
 +                /* 2025/03/29 enabling delay to accel AAC -> no effect */
-+                delay(config.delay_ms); // delay() supress WDT trigger. yiedl() doesn't.
++                //delay(config.delay_ms); // delay() supress WDT trigger. yiedl() doesn't.
++                // disabled delay() on 2025/7/12 while disabling watcdog
 +                //yield();
 +#endif
              }
              return result;
          }
-@@ -247,8 +343,31 @@
+@@ -247,8 +344,31 @@
                  return 0;
              }
              LOGD("readBytes %d", len);
@@ -1263,7 +1264,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
              return result;
          }
         
-@@ -273,6 +392,51 @@
+@@ -273,6 +393,51 @@
              return true;
          }
  
@@ -1315,7 +1316,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
      protected:
          A2DPConfig config;
          BluetoothA2DPSource *a2dp_source = nullptr;
-@@ -284,7 +448,13 @@
+@@ -284,7 +449,13 @@
          static bool detected_device(const char* ssid, esp_bd_addr_t address, int rssi){
              LOGW("found Device: %s rssi: %d", ssid, rssi);
              //filter out weak signals
@@ -1329,7 +1330,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
      
          static void a2dp_state_callback(esp_a2d_connection_state_t state, void *caller){
-@@ -294,6 +464,30 @@
+@@ -294,6 +465,30 @@
                   is_a2dp_active = true;
              } 
              LOGW("==> state: %s", self->a2dp->to_str(state));
@@ -1360,7 +1361,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
  
  
-@@ -302,14 +496,94 @@
+@@ -302,14 +497,94 @@
              int32_t result_len = 0;
              A2DPConfig config = A2DPStream_self->config;
  
@@ -1480,7 +1481,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h ardu
 +} // namespace
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino-audio-tools/src/AudioTools/AudioPlayer.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-05 15:44:03.153797900 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-06-08 22:07:29.959740900 +0900
++++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-07-12 17:04:31.150396200 +0900
 @@ -13,6 +13,10 @@
  #include "AudioTools/Fade.h"
  #include "AudioTools/StreamCopy.h"
