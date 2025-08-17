@@ -503,7 +503,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpRequest.h arduino-
  };
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-audio-tools/src/AudioHttp/URLStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-18 16:08:27.755766900 +0900
-+++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-07-13 01:15:14.407317100 +0900
++++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-07-26 15:25:37.939847300 +0900
 @@ -48,6 +48,13 @@
    ~URLStream() {
      TRACED();
@@ -636,11 +636,12 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-au
      return true;
    }
  
-@@ -334,35 +379,102 @@
+@@ -334,35 +379,103 @@
      // keep icy across redirect requests ?
      const char* icy = request.header().get("Icy-MetaData");
  
-+    LOGW("Opening: %s", url.url());
++    LOGW("Opening: [%s]", url.url());
++    LOGW("Mime: [%s]", reqMime);
 +#if 0
 +    Client* p_client = &getClient(url.isSecure());
 +    if (p_client->connected()) {
@@ -1056,7 +1057,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-07-13 18:08:50.232051700 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-08-17 10:59:57.757912000 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1454,6 +1455,232 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                      memset(data,0, len);
                      result_len = len;
                  }
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/HLSStream.h arduino-audio-tools/src/AudioLibs/HLSStream.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/HLSStream.h	2025-05-05 15:44:02.961144900 +0900
++++ arduino-audio-tools/src/AudioLibs/HLSStream.h	2025-07-27 12:33:58.259421700 +0900
+@@ -100,11 +100,20 @@
+     LOGI("Adding %s", url);
+     Str url_str(url);
+     char *str = new char[url_str.length() + 1];
++#if 1
++    memcpy(str, url_str.c_str(), url_str.length());
++    str[url_str.length()] = 0x00;
++#else
+     memcpy(str, url_str.c_str(), url_str.length() + 1);
++#endif
+ #if USE_TASK
+     LockGuard lock_guard{mutex};
+ #endif
++#if 1
++    urls.push_back((const char *)str);
++#else
+     urls.push_back(str);
++#endif
+   }
+ 
+   /// Provides the number of open urls which can be played. Refills them, when
+@@ -254,8 +263,17 @@
+     }
+     if (!found) {
+       char *str = new char[url_str.length() + 1];
++#if 1
++      memcpy(str, url, url_str.length());
++      str[url_str.length()] = 0x00;
++#else
+       memcpy(str, url, url_str.length() + 1);
++#endif
++#if 1
++      history.push_back((const char *)str);
++#else
+       history.push_back(str);
++#endif
+       if (history.size() > 20) {
+         delete (history[0]);
+         history.pop_front();
+@@ -290,20 +308,35 @@
+     custom_log_level.set();
+     segments_url_str = "";
+     bandwidth = 0;
++#if 1
++    LOGW("(1) HLSParse() begin()");
++#endif
++#if 1
++    LOGW("(2) HLSParse() calling parseIndex()");
++#endif
+     if (!parseIndex()) {
+       TRACEE();
+       return false;
+     }
++#if 1
++    LOGW("(3) HLSParse() calling parseSegments()");
++#endif
+     if (!parseSegments()) {
+       TRACEE();
+       return false;
+     }
+ 
++#if 1
++    LOGW("(4) HLSParse() calling p_url_loader->begin()");
++#endif
+     if (!p_url_loader->begin()) {
+       TRACEE();
+       return false;
+     }
+ 
++#if 1
++    LOGW("(5) HLSParse() calling segment_load_task.begin()");
++#endif
+ #if USE_TASK
+     segment_load_task.begin(std::bind(&HLSParser::reloadSegments, this));
+ #endif
+@@ -416,6 +449,9 @@
+ 
+     // we only update the content length
+     url_stream.setAutoCreateLines(false);
++#if 1
++    LOGW("parseIndex(): [%s]", index_url_str);
++#endif
+     bool rc = url_stream.begin(index_url_str);
+     url_active = true;
+     rc = parseIndexLines();
+@@ -429,15 +465,29 @@
+     bool result = true;
+     is_extm3u = false;
+ 
++#if 1
++    LOGW("parseIndexLines()");
++#endif
++
+     // parse lines
+     memset(tmp, 0, MAX_HLS_LINE);
+     while (true) {
+       memset(tmp, 0, MAX_HLS_LINE);
+       size_t len =
+           url_stream.httpRequest().readBytesUntil('\n', tmp, MAX_HLS_LINE);
++#if 1
++      if (tmp[len - 1] == '\r') {
++        tmp[len - 1] = 0x00;
++        len = 1;
++      }
++#endif
+       if (len == 0 && url_stream.available() == 0) break;
+       Str str(tmp);
+ 
++#if 1
++      LOGW("Str: [%s]", tmp);
++#endif
++
+       // check header
+       if (str.indexOf("#EXTM3U") >= 0) {
+         is_extm3u = true;
+@@ -467,10 +517,18 @@
+     }
+     parse_segments_active = true;
+ 
++#if 1
++    LOGW("Available urls: %d", p_url_loader->urlCount());
++#else
+     LOGI("Available urls: %d", p_url_loader->urlCount());
++#endif
+ 
+     if (url_stream) url_stream.clear();
++#if 1
++    LOGW("parsing %s", segments_url_str.c_str());
++#else
+     LOGI("parsing %s", segments_url_str.c_str());
++#endif
+ 
+     if (segments_url_str.isEmpty()) {
+       TRACEE();
+@@ -515,6 +573,12 @@
+       memset(tmp, 0, MAX_HLS_LINE);
+       size_t len =
+           url_stream.httpRequest().readBytesUntil('\n', tmp, MAX_HLS_LINE);
++#if 1
++      if (tmp[len - 1] == '\r') {
++        tmp[len - 1] = 0x00;
++        len = 1;
++      }
++#endif
+       if (len == 0 && url_stream.available() == 0) break;
+       Str str(tmp);
+ 
+@@ -539,7 +603,11 @@
+ 
+     int pos = str.indexOf("#");
+     if (pos >= 0) {
++#if 1
++      LOGW("-> Segment:  %s", str.c_str());
++#else
+       LOGI("-> Segment:  %s", str.c_str());
++#endif
+ 
+       pos = str.indexOf("#EXT-X-MEDIA-SEQUENCE:");
+       if (pos >= 0) {
+@@ -581,7 +649,11 @@
+   // Determine codec for min bandwidth
+   bool parseIndexLine(Str &str) {
+     TRACED();
++#if 1
++    LOGW("> %s", str.c_str());
++#else
+     LOGI("> %s", str.c_str());
++#endif
+     int tmp_bandwidth;
+     if (str.indexOf("EXT-X-STREAM-INF") >= 0) {
+       // determine min bandwidth
+@@ -608,7 +680,29 @@
+     if (str.startsWith("http")) {
+       // check if we have a valid codec
+       segments_url_str.set(str);
++#if 1
++      LOGW("segments_url_str = [%s]", str.c_str());
++      char *cstr = new char[segments_url_str.length() + 1];
++      memcpy(cstr, segments_url_str.c_str(), segments_url_str.length());
++      cstr[segments_url_str.length()] = 0x00;
++      LOGW("Length: %d", segments_url_str.length());
++#if 0
++      for (int i = 0 ; i < segments_url_str.length() ; i++) {
++//        if ((unsigned)cstr[i] < 0x20 || (unsigned)cstr[i] > 0x7f) {
++          LOGW("Index: %d = %02x", i, cstr[i]);
++//        }
++      }
++#endif
++//      LOGW("Index: %d = %02x", segments_url_str.length() - 2, cstr[segments_url_str.length() - 2]);
++//      LOGW("Index: %d = %02x", segments_url_str.length() - 1, cstr[segments_url_str.length() - 1]);
++//      LOGW("Index: %d = %02x", segments_url_str.length(), cstr[segments_url_str.length()]);
++      if (cstr[segments_url_str.length() - 1] == '\r') {
++        cstr[segments_url_str.length() - 1] = 0x00;
++        segments_url_str.set(cstr);
++      }
++#else
+       LOGD("segments_url_str = %s", str.c_str());
++#endif
+     }
+ 
+     return true;
+@@ -625,7 +719,14 @@
+ 
+ class HLSStream : public AudioStream {
+  public:
++#if 0
++  HLSStream() {
++    setSSID("unknown");
++    setPassword("unknown");
++  }
++#else
+   HLSStream() = default;
++#endif
+ 
+   HLSStream(const char *ssid, const char *password) {
+     setSSID(ssid);
+@@ -703,4 +804,4 @@
+ 
+ }  // namespace audio_tools
+ 
+-#endif
+\ No newline at end of file
++#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h arduino-audio-tools/src/AudioMetaData/MetaDataID3.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h	2025-05-05 15:44:03.058573800 +0900
 +++ arduino-audio-tools/src/AudioMetaData/MetaDataID3.h	2025-04-23 02:30:19.764615600 +0900
@@ -1478,7 +1705,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h ardu
 +} // namespace
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino-audio-tools/src/AudioTools/AudioPlayer.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-05 15:44:03.153797900 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-07-13 18:36:28.715359400 +0900
++++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-08-17 11:41:02.458981400 +0900
 @@ -13,6 +13,10 @@
  #include "AudioTools/Fade.h"
  #include "AudioTools/StreamCopy.h"
@@ -1620,7 +1847,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    }
  
    /// (Re)defines the notify
-@@ -227,13 +304,35 @@
+@@ -227,13 +304,46 @@
    /// Updates the audio info in the related objects
    virtual void setAudioInfo(AudioInfo info) override {
      TRACED();
@@ -1639,6 +1866,17 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      LOGI("bits_per_sample: %d", (int) info.bits_per_sample);
      LOGI("channels: %d", (int) info.channels);
 +#endif
++#if 1 /* 2025/08/17 */
++    // reset a2dp buffer after audio change
++    ((A2DPStream *)p_final_print)->reset_a2dp_buf();
++// infinite loop
++//    // remove any data in the decoder
++//    if (p_decoder != nullptr) {
++//      LOGI("reset codec");
++//      p_decoder->end();
++//      p_decoder->begin();
++//    }
++#endif
      this->info = info;
 +#if 1 /* XXX */
 +    if (p_conv != nullptr) {
@@ -1656,7 +1894,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      // notifiy final ouput: e.g. i2s
      if (p_final_print != nullptr)
        p_final_print->setAudioInfo(info);
-@@ -264,6 +363,9 @@
+@@ -264,6 +374,9 @@
      writeEnd();
      stream_increment = offset >= 0 ? 1 : -1;
      active = setStream(p_source->nextStream(offset));
@@ -1666,7 +1904,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      return active;
    }
  
-@@ -296,14 +398,33 @@
+@@ -296,14 +409,33 @@
  
    /// start selected input stream
    virtual bool setStream(Stream *input) {
@@ -1700,7 +1938,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      return p_input_stream != nullptr;
    }
  
-@@ -318,6 +439,9 @@
+@@ -318,6 +450,9 @@
  
    /// The same like start() / stop()
    virtual void setActive(bool isActive) {
@@ -1710,7 +1948,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      if (is_auto_fade) {
        if (isActive) {
          fade.setFadeInActive(true);
-@@ -327,6 +451,7 @@
+@@ -327,6 +462,7 @@
          writeSilence(2048);
        }
      }
@@ -1718,7 +1956,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      active = isActive;
    }
  
-@@ -357,6 +482,12 @@
+@@ -357,6 +493,12 @@
    /// Defines the wait time in ms if the target output is full
    virtual void setDelayIfOutputFull(int delayMs) { delay_if_full = delayMs; }
  
@@ -1731,7 +1969,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    virtual size_t copy() {
      return copy(copier.bufferSize());
    }
-@@ -456,7 +587,11 @@
+@@ -456,7 +598,11 @@
    bool silence_on_inactive = false;
    AudioSource *p_source = nullptr;
    VolumeStream volume_out; // Volume control
@@ -1743,7 +1981,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    MetaDataID3 meta_out;    // Metadata parser
    EncodedAudioOutput out_decoding; // Decoding stream
    CopyDecoder no_decoder{true};
-@@ -473,13 +608,23 @@
+@@ -473,13 +619,23 @@
    float current_volume = -1.0f; // illegal value which will trigger an update
    int delay_if_full = 100;
    bool is_auto_fade = true;
@@ -1767,7 +2005,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    }
  
    virtual void moveToNextFileOnTimeout() {
-@@ -488,10 +633,20 @@
+@@ -488,10 +644,20 @@
      if (p_final_stream != nullptr && p_final_stream->availableForWrite() == 0)
          return;
      if (p_input_stream == nullptr || millis() > timeout) {
@@ -1788,7 +2026,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
          // open next stream
          if (!next(stream_increment)) {
            LOGD("stream is null");
-@@ -506,12 +661,20 @@
+@@ -506,12 +672,20 @@
    void writeEnd() {
      // end silently
      TRACEI();

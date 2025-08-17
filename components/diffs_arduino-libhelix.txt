@@ -47,7 +47,7 @@ diff -ur ../../TMP_LIBS/arduino-libhelix/CMakeLists.txt arduino-libhelix/CMakeLi
 +endif()
 diff -ur ../../TMP_LIBS/arduino-libhelix/src/AACDecoderHelix.h arduino-libhelix/src/AACDecoderHelix.h
 --- ../../TMP_LIBS/arduino-libhelix/src/AACDecoderHelix.h	2025-05-05 15:31:11.956290600 +0900
-+++ arduino-libhelix/src/AACDecoderHelix.h	2025-04-06 01:30:33.520331700 +0900
++++ arduino-libhelix/src/AACDecoderHelix.h	2025-08-17 15:39:27.821989000 +0900
 @@ -78,6 +78,9 @@
    }
  
@@ -58,7 +58,7 @@ diff -ur ../../TMP_LIBS/arduino-libhelix/src/AACDecoderHelix.h arduino-libhelix/
    HAACDecoder decoder = nullptr;
    AACDataCallback pcmCallback = nullptr;
    AACInfoCallback infoCallback = nullptr;
-@@ -134,8 +137,15 @@
+@@ -134,8 +137,18 @@
                      p_caller_data);
        } else {
          // output to stream
@@ -71,12 +71,15 @@ diff -ur ../../TMP_LIBS/arduino-libhelix/src/AACDecoderHelix.h arduino-libhelix/
 +#if 0
 +          first = 0;
 +#endif
++#if 1 /* 2025/08/17 clear decoded buffer when sample rate changed to prevent terrible noise */
++          memset(pcm_buffer.data(), 0, maxPCMSize());
++#endif
            infoCallback(info, p_caller_ref);
          }
  #if defined(ARDUINO) || defined(HELIX_PRINT)
 diff -ur ../../TMP_LIBS/arduino-libhelix/src/ConfigHelix.h arduino-libhelix/src/ConfigHelix.h
 --- ../../TMP_LIBS/arduino-libhelix/src/ConfigHelix.h	2025-05-05 15:31:11.960409200 +0900
-+++ arduino-libhelix/src/ConfigHelix.h	2025-04-26 14:12:24.747947200 +0900
++++ arduino-libhelix/src/ConfigHelix.h	2025-07-12 14:20:24.451596500 +0900
 @@ -11,10 +11,10 @@
  
  // mp3
@@ -123,11 +126,9 @@ diff -ur ../../TMP_LIBS/arduino-libhelix/src/ConfigHelix.h arduino-libhelix/src/
 -#endif
 \ No newline at end of file
 +#endif
-Only in arduino-libhelix/src: ConfigHelix.h.ORG-20240705-0705
-Only in arduino-libhelix/src: ConfigHelix.h~
 diff -ur ../../TMP_LIBS/arduino-libhelix/src/MP3DecoderHelix.h arduino-libhelix/src/MP3DecoderHelix.h
 --- ../../TMP_LIBS/arduino-libhelix/src/MP3DecoderHelix.h	2025-05-05 15:31:11.962446500 +0900
-+++ arduino-libhelix/src/MP3DecoderHelix.h	2025-04-04 01:32:15.750402700 +0900
++++ arduino-libhelix/src/MP3DecoderHelix.h	2025-08-17 15:39:46.576724900 +0900
 @@ -82,6 +82,9 @@
    }
  
@@ -138,7 +139,7 @@ diff -ur ../../TMP_LIBS/arduino-libhelix/src/MP3DecoderHelix.h arduino-libhelix/
    HMP3Decoder decoder = nullptr;
    MP3DataCallback pcmCallback = nullptr;
    MP3InfoCallback infoCallback = nullptr;
-@@ -144,7 +147,12 @@
+@@ -144,7 +147,15 @@
                      p_caller_data);
        } else {
          // output to stream
@@ -148,10 +149,13 @@ diff -ur ../../TMP_LIBS/arduino-libhelix/src/MP3DecoderHelix.h arduino-libhelix/
 +#else
          if (info.samprate != mp3FrameInfo.samprate && infoCallback != nullptr) {
 +#endif
++#if 1 /* 2025/08/17 clear decoded buffer when sample rate changed to prevent terrible noise */
++          memset(pcm_buffer.data(), 0, maxPCMSize());
++#endif
            infoCallback(info, p_caller_ref);
          }
  #if defined(ARDUINO) || defined(HELIX_PRINT)
-@@ -157,4 +165,4 @@
+@@ -157,4 +168,4 @@
    }
  };
  
@@ -193,7 +197,7 @@ diff -ur ../../TMP_LIBS/arduino-libhelix/src/libhelix-mp3/mp3common.h arduino-li
  	/* pointers to platform-specific data structures */
 diff -ur ../../TMP_LIBS/arduino-libhelix/src/utils/Allocator.h arduino-libhelix/src/utils/Allocator.h
 --- ../../TMP_LIBS/arduino-libhelix/src/utils/Allocator.h	2025-05-05 15:31:11.977198500 +0900
-+++ arduino-libhelix/src/utils/Allocator.h	2025-03-31 20:19:40.233882100 +0900
++++ arduino-libhelix/src/utils/Allocator.h	2025-07-12 17:16:50.413795800 +0900
 @@ -5,6 +5,7 @@
  #ifdef ESP32
  #  include "Arduino.h"
