@@ -11,9 +11,9 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.48 (2025/08/17)"
+#define APP_VERSION "1.52 (2026/02/14)"
 
-#if 0 /* 1 if enabling Ethernet port */
+#if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
 #endif
 
@@ -470,7 +470,7 @@ static char *rssi = DEF_RSSI, rssi_buf[RSSI_BUF_SIZE];
 static char *urlp[URL_NUM], url_buf[URL_NUM][URL_BUF_SIZE];
 
 #define PORT_BUF_SIZE 32
-#ifdef BT_WIFI_ETHER
+#if 0 /*def BT_WIFI_ETHER*/ /* default "wifi" even with Ether */
 static char *port = "eth", port_buf[PORT_BUF_SIZE];
 #else
 static char *port = "wifi", port_buf[PORT_BUF_SIZE];
@@ -1204,6 +1204,17 @@ void loop() {
   }
 
   int press_count = push_button_check();
+
+  extern int bt_prev_pushed, bt_next_pushed;
+
+  if (bt_next_pushed) {
+    press_count = 1;
+    bt_next_pushed = 0;
+  }
+  if (bt_prev_pushed) {
+    press_count = 2;
+    bt_prev_pushed = 0;
+  }
 
   //if (press_count || !player.isActive()) {
   if (press_count) {
