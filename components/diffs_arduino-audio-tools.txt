@@ -263,10 +263,62 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioConfig.h arduino-audio-tool
  
  // // Default LED
  // #ifndef LED_BUILTIN
+diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpChunkReader.h arduino-audio-tools/src/AudioHttp/HttpChunkReader.h
+--- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpChunkReader.h	2025-05-05 15:44:02.786858300 +0900
++++ arduino-audio-tools/src/AudioHttp/HttpChunkReader.h	2026-02-15 10:24:04.338085800 +0900
+@@ -40,6 +40,11 @@
+     // read the chunk data - but not more then available
+     int read_max = len < open_chunk_len ? len : open_chunk_len;
+     int len_processed = client.read(str, read_max);
++#if 1 /* XXX */
++    if (len_processed < 0) {
++      return len_processed;
++    }
++#endif
+     // update current unprocessed chunk
+     open_chunk_len -= len_processed;
+ 
+@@ -60,6 +65,11 @@
+ 
+     int read_max = len < open_chunk_len ? len : open_chunk_len;
+     int len_processed = readlnInternal(client, str, read_max, incl_nl);
++#if 1 /* XXX */
++    if (len_processed < 0) {
++      return len_processed;
++    }
++#endif
+     open_chunk_len -= len_processed;
+ 
+     // the chunks are terminated by a final CRLF
+@@ -103,7 +113,11 @@
+     LOGD("HttpChunkReader::readChunkLen");
+     uint8_t len_str[51];
+     readlnInternal(client, len_str, 50, false);
++#if 1
++    LOGW("HttpChunkReader::readChunkLen %s", (const char *)len_str);
++#else
+     LOGD("HttpChunkReader::readChunkLen %s", (const char *)len_str);
++#endif
+     open_chunk_len = strtol((char *)len_str, nullptr, 16);
+ 
+     char msg[40];
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h arduino-audio-tools/src/AudioHttp/HttpHeader.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h	2025-05-05 15:44:02.790447900 +0900
-+++ arduino-audio-tools/src/AudioHttp/HttpHeader.h	2025-04-13 00:07:32.099967100 +0900
-@@ -235,10 +235,17 @@
++++ arduino-audio-tools/src/AudioHttp/HttpHeader.h	2026-02-11 18:07:05.868034400 +0900
+@@ -69,7 +69,12 @@
+   HttpHeader() {
+     LOGD("HttpHeader");
+     // set default values
++#if 0
++    /* some web servers actually respond WITHOUT chunked transfer when 1.0 */
++    protocol_str = "HTTP/1.0";
++#else
+     protocol_str = "HTTP/1.1";
++#endif
+     url_path = "/";
+     status_msg = "";
+   }
+@@ -235,10 +240,17 @@
      char* line = tempBuffer();
      if (in.connected()) {
        if (in.available() == 0) {
@@ -284,7 +336,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h arduino-a
            count++;
            if (count == 2) {
              LOGI("Waiting for data...");
-@@ -251,6 +258,7 @@
+@@ -251,6 +263,7 @@
            }
          }
          LOGI("Data available: %d", in.available());
@@ -292,7 +344,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h arduino-a
        }
  
        readLine(in, line, HTTP_MAX_LEN);
-@@ -507,4 +515,4 @@
+@@ -507,4 +520,4 @@
    }
  };
  
@@ -301,8 +353,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h arduino-a
 +}  // namespace audio_tools
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h arduino-audio-tools/src/AudioHttp/HttpLineReader.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2025-05-05 15:44:02.794846600 +0900
-+++ arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2025-04-13 00:06:34.294720700 +0900
-@@ -20,6 +20,9 @@
++++ arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2026-02-11 11:22:50.733180600 +0900
+@@ -20,23 +20,46 @@
                               bool incl_nl = true) {
      int result = 0;
      LOGD("HttpLineReader %s", "readlnInternal");
@@ -310,9 +362,14 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h ardui
 +    //
 +#else
      // wait for first character
++#if 1
++    for (int w = 0; w < 2000 && client.available() == 0; w++) {
++      delay(1);
++#else
      for (int w = 0; w < 20 && client.available() == 0; w++) {
        delay(100);
-@@ -27,9 +30,13 @@
++#endif
+     }
      // if we do not have any data we stop
      if (client.available() == 0) {
        LOGW("HttpLineReader %s", "readlnInternal->no Data");
@@ -326,7 +383,25 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h ardui
  
      // process characters until we find a new line
      bool is_buffer_owerflow = false;
-@@ -44,6 +51,9 @@
+     int j = 0;
+     while (true) {
++#if 1 /* XXX */
++      for (int w = 0; w < 2000 && client.available() == 0; w++) {
++        delay(1);
++      }
++      if (client.available() == 0) {
++        LOGW("HttpLineReader %s", "NOT AVAILABLE");
++      }
++#endif
+       int c = client.read();
+       if (c == -1) {
++#if 1
++        LOGW("HttpLineReader %s", "read() = -1");
++#endif
+         break;
+       }
+ 
+@@ -44,6 +67,9 @@
          result++;
        } else {
          is_buffer_owerflow = true;
@@ -336,7 +411,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h ardui
        }
  
        if (c == '\n') {
-@@ -72,7 +82,14 @@
+@@ -72,7 +98,14 @@
      }
      str[result - 1] = 0;
      if (is_buffer_owerflow) {
@@ -1057,7 +1132,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-08-17 10:59:57.757912000 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-02-15 10:41:40.093655300 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1410,8 +1485,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +                  LOGW("a2dp buffered: %d", a2dp_buffer.available());
 +
 +                  is_buffering = false;
-+                  fade_count = 44100 / 2; /* assuming 500msec */
 +                  fade_volume = 0;
++                  fade_count = 44100 / 2; /* assuming 500msec */
 +                }
 +                if (is_buffering || a2dp_buffer.available() < len) {
 +                  if (is_buffering == false) {
@@ -1705,7 +1780,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h ardu
 +} // namespace
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino-audio-tools/src/AudioTools/AudioPlayer.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-05 15:44:03.153797900 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-08-17 11:41:02.458981400 +0900
++++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2026-02-15 10:43:34.915024700 +0900
 @@ -13,6 +13,10 @@
  #include "AudioTools/Fade.h"
  #include "AudioTools/StreamCopy.h"
@@ -2161,7 +2236,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioStreamsConverter
 +}  // namespace audio_tools
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-tools/src/AudioTools/Fade.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h	2025-05-05 15:44:03.188016000 +0900
-+++ arduino-audio-tools/src/AudioTools/Fade.h	2025-04-20 16:53:22.926540800 +0900
++++ arduino-audio-tools/src/AudioTools/Fade.h	2026-02-15 10:50:37.327934500 +0900
 @@ -15,9 +15,19 @@
  
  class Fade {
