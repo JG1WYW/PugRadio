@@ -1204,6 +1204,7 @@ void loop() {
   }
 
   int press_count = push_button_check();
+  int flag_reverse = 0;
 
   extern int bt_prev_pushed, bt_next_pushed;
 
@@ -1225,6 +1226,8 @@ void loop() {
           playing_idx = 0;
 
     } else if (press_count == 2) {
+      flag_reverse = 1;
+
       if (--playing_idx < 0)
           playing_idx = URL_NUM - 1;
 
@@ -1279,8 +1282,13 @@ void loop() {
         rv = player.setIndex(playing_idx);
         //Serial.printf("Result: %d\r\n", rv);
         if (rv != 1) {
-          if (++playing_idx >= URL_NUM)
-            playing_idx = 0;
+          if (flag_reverse) {
+            if (--playing_idx < 0)
+              playing_idx = URL_NUM - 1;
+          } else {
+            if (++playing_idx >= URL_NUM)
+              playing_idx = 0;
+          }
         }
       } while (rv != 1);
 
