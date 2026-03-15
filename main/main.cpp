@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.52 (2026/02/14)"
+#define APP_VERSION "1.53 (2026/03/14)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -443,6 +443,7 @@ void processEndCallback(URLStream& stream, HttpRequest& request, Url& url)
   //Serial.printf("connectCallback: request.reply().statusCode() %d\n", request.reply().statusCode());
   Serial.printf("Content-Type: %s\r\n", request.reply().get(CONTENT_TYPE));
 
+#if 0 /* decided not to allow AAC */
   if (strstr(request.reply().get(CONTENT_TYPE), "audio/aac")) {
     Serial.printf("Changing decoder to AAC\r\n");
     player.setDecoder(decoderAAC);
@@ -450,6 +451,7 @@ void processEndCallback(URLStream& stream, HttpRequest& request, Url& url)
     Serial.printf("Changing decoder to MP3\r\n");
     player.setDecoder(decoder);
   }
+#endif
 }
 
 #define BT_BUF_SIZE 32

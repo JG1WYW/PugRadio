@@ -1780,7 +1780,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h ardu
 +} // namespace
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino-audio-tools/src/AudioTools/AudioPlayer.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-05 15:44:03.153797900 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2026-02-15 10:43:34.915024700 +0900
++++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2026-03-14 02:03:30.758099100 +0900
 @@ -13,6 +13,10 @@
  #include "AudioTools/Fade.h"
  #include "AudioTools/StreamCopy.h"
@@ -1941,7 +1941,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      LOGI("bits_per_sample: %d", (int) info.bits_per_sample);
      LOGI("channels: %d", (int) info.channels);
 +#endif
-+#if 1 /* 2025/08/17 */
++#if 0 /* 2026/3/14 1->0 */ /* 2025/08/17 */
 +    // reset a2dp buffer after audio change
 +    ((A2DPStream *)p_final_print)->reset_a2dp_buf();
 +// infinite loop
