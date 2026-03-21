@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.53 (2026/03/14)"
+#define APP_VERSION "1.54 (2026/03/21)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -1078,19 +1078,24 @@ void setup() {
   Serial.printf("Starting Audio Player: index = %d\r\n", playing_idx);
   bool rv = player.begin(playing_idx, true);
   //bool rv = player.begin();
+#if 1
+  int retry_count = 1;
+  while (rv == false) {
+    Serial.println("Starting Audio Player failed. Retrying...");
+    if (++playing_idx >= URL_NUM)
+      playing_idx = 0;
+    Serial.printf("Play index = %d\r\n", playing_idx);
+    rv = player.next();
+    if (++retry_count == URL_NUM)
+      break;
+  }
+#endif
   if (rv == false) {
     Serial.println("Starting Audio Player failed.");
     Serial.println("Rebooting...");
     delay(1000);
     ESP.restart();
   }
-#if 0
-  while (rv == false) {
-    rv = player.next();
-    Serial.printf("setup(): next() rv: %d\r\n", rv);
-    Serial.println("setup(): Play Next");
-  }
-#endif
 #endif
 
 #if 0
