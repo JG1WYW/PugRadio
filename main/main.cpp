@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.54 (2026/03/21)"
+#define APP_VERSION "1.55 (2026/03/26)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER

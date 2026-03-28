@@ -1132,7 +1132,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-02-15 10:41:40.093655300 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-03-25 21:53:49.304878500 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1780,7 +1780,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioMetaData/MetaDataID3.h ardu
 +} // namespace
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino-audio-tools/src/AudioTools/AudioPlayer.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h	2025-05-05 15:44:03.153797900 +0900
-+++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2026-03-14 02:03:30.758099100 +0900
++++ arduino-audio-tools/src/AudioTools/AudioPlayer.h	2026-03-25 22:45:45.082630800 +0900
 @@ -13,6 +13,10 @@
  #include "AudioTools/Fade.h"
  #include "AudioTools/StreamCopy.h"
@@ -1812,20 +1812,20 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
  
    void setOutput(AudioOutput &output) {
      if (p_decoder->isResultPCM()) {
-+#if 0
++#if 1
 +     if (p_conv != nullptr) {
 +      this->fade.setOutput(*p_conv);
 +     } else {
 +#endif
-+#if 1
++#if 0
 +      // do not use fade
 +#else
        this->fade.setOutput(output);
 +#endif
-+#if 0
-+     }
-+#endif
 +#if 1
++    }
++#endif
++#if 0
 +     // skipping fade
 +     if (p_conv != nullptr) {
 +      this->volume_out.setOutput(*p_conv);
@@ -1842,7 +1842,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
  
    void setOutput(Print &output) {
      if (p_decoder->isResultPCM()) {
-+#if 1
++#if 0
 +      // do not use fade
 +      this->volume_out.setOutput(output);
 +#else
@@ -1856,20 +1856,20 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
  
    void setOutput(AudioStream &output) {
      if (p_decoder->isResultPCM()) {
-+#if 0
++#if 1
 +     if (p_conv != nullptr) {
 +      this->fade.setOutput(*p_conv);
 +     } else {
 +#endif
-+#if 1
++#if 0
 +      // do not use fade
 +#else
        this->fade.setOutput(output);
 +#endif
-+#if 0
++#if 1
 +     }
 +#endif
-+#if 1
++#if 0
 +     // skipping fade
 +     if (p_conv != nullptr) {
 +      this->volume_out.setOutput(*p_conv);
@@ -1922,7 +1922,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    }
  
    /// (Re)defines the notify
-@@ -227,13 +304,46 @@
+@@ -227,13 +304,49 @@
    /// Updates the audio info in the related objects
    virtual void setAudioInfo(AudioInfo info) override {
      TRACED();
@@ -1961,15 +1961,18 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
 +#endif
      // notifiy volume
      volume_out.setAudioInfo(info);
-+#if 1
++#if 0
 +    // do not use fade
 +#else
      fade.setAudioInfo(info);
++#if 1 /* 2026/03/25 */
++    fade.setFadeInActive(true);
++#endif
 +#endif
      // notifiy final ouput: e.g. i2s
      if (p_final_print != nullptr)
        p_final_print->setAudioInfo(info);
-@@ -264,6 +374,9 @@
+@@ -264,6 +377,9 @@
      writeEnd();
      stream_increment = offset >= 0 ? 1 : -1;
      active = setStream(p_source->nextStream(offset));
@@ -1979,7 +1982,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      return active;
    }
  
-@@ -296,14 +409,33 @@
+@@ -296,14 +412,33 @@
  
    /// start selected input stream
    virtual bool setStream(Stream *input) {
@@ -2013,17 +2016,17 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      return p_input_stream != nullptr;
    }
  
-@@ -318,6 +450,9 @@
+@@ -318,6 +453,9 @@
  
    /// The same like start() / stop()
    virtual void setActive(bool isActive) {
-+#if 1
++#if 0
 +    // do not use fade
 +#else
      if (is_auto_fade) {
        if (isActive) {
          fade.setFadeInActive(true);
-@@ -327,6 +462,7 @@
+@@ -327,6 +465,7 @@
          writeSilence(2048);
        }
      }
@@ -2031,7 +2034,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
      active = isActive;
    }
  
-@@ -357,6 +493,12 @@
+@@ -357,6 +496,12 @@
    /// Defines the wait time in ms if the target output is full
    virtual void setDelayIfOutputFull(int delayMs) { delay_if_full = delayMs; }
  
@@ -2044,11 +2047,11 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    virtual size_t copy() {
      return copy(copier.bufferSize());
    }
-@@ -456,7 +598,11 @@
+@@ -456,7 +601,11 @@
    bool silence_on_inactive = false;
    AudioSource *p_source = nullptr;
    VolumeStream volume_out; // Volume control
-+#if 1
++#if 0
 +  // do not use fade
 +#else
    FadeStream fade;         // Phase in / Phase Out to avoid popping noise
@@ -2056,7 +2059,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    MetaDataID3 meta_out;    // Metadata parser
    EncodedAudioOutput out_decoding; // Decoding stream
    CopyDecoder no_decoder{true};
-@@ -473,13 +619,23 @@
+@@ -473,13 +622,23 @@
    float current_volume = -1.0f; // illegal value which will trigger an update
    int delay_if_full = 100;
    bool is_auto_fade = true;
@@ -2065,7 +2068,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
 +#endif
  
    void setupFade() {
-+#if 1
++#if 0
 +    // do not use fade
 +#else
      if (p_final_print != nullptr) {
@@ -2080,11 +2083,11 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
    }
  
    virtual void moveToNextFileOnTimeout() {
-@@ -488,10 +644,20 @@
+@@ -488,10 +647,20 @@
      if (p_final_stream != nullptr && p_final_stream->availableForWrite() == 0)
          return;
      if (p_input_stream == nullptr || millis() > timeout) {
-+#if 1
++#if 0
 +      // do not use fade
 +#else
        if (is_auto_fade)
@@ -2101,11 +2104,11 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioPlayer.h arduino
          // open next stream
          if (!next(stream_increment)) {
            LOGD("stream is null");
-@@ -506,12 +672,20 @@
+@@ -506,12 +675,20 @@
    void writeEnd() {
      // end silently
      TRACEI();
-+#if 1
++#if 0
 +    // do not use fade
 +#else
      if (is_auto_fade) {
@@ -2236,8 +2239,8 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/AudioStreamsConverter
 +}  // namespace audio_tools
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-tools/src/AudioTools/Fade.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h	2025-05-05 15:44:03.188016000 +0900
-+++ arduino-audio-tools/src/AudioTools/Fade.h	2026-02-15 10:50:37.327934500 +0900
-@@ -15,9 +15,19 @@
++++ arduino-audio-tools/src/AudioTools/Fade.h	2026-03-26 22:54:44.194123900 +0900
+@@ -15,9 +15,21 @@
  
  class Fade {
  public:
@@ -2248,27 +2251,33 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-
 +#endif
 +
    void setFadeInActive(bool flag) {
-+    //LOGW("setFadeInAtive(): %d", flag);
++    LOGW("setFadeInAtive(): %d", flag);
      is_fade_in = flag;
      if (is_fade_in) {
 +#if 1
-+      fade_frames = bits_per_sample / 2; /* assuming 500msec */
++      //fade_frames = bits_per_sample / 2; /* assuming 500msec */
++      //fade_frames = bits_per_sample; /* assuming 1sec */
++      fade_frames = bits_per_sample * 3; /* assuming 3sec */
 +#endif
        volume = 0.0;
        is_fade_out = false;
        is_done = false;
-@@ -74,13 +84,40 @@
+@@ -74,13 +86,44 @@
    int channels = 2;
    float volume = 1.0;
    bool is_done = false;
 +#if 1
 +  int bits_per_sample = 44100;
-+  int fade_frames = bits_per_sample / 2; /* assuming 500msec */
++  //int fade_frames = bits_per_sample / 2; /* assuming 500msec */
++  //int fade_frames = bits_per_sample; /* assuming 1sec */
++  int fade_frames = bits_per_sample * 3; /* assuming 3sec */
 +#endif
  
    template <typename T> void convertFrames(T *data, int frames, int channels) {
 +#if 1
-+    float delta = 1.0 / (bits_per_sample / 2); /* assuming 500msec */
++    //float delta = 1.0 / (bits_per_sample / 2); /* assuming 500msec */
++    //float delta = 1.0 / (bits_per_sample); /* assuming 1sec */
++    float delta = 1.0 / (bits_per_sample * 3); /* assuming 3sec */
 +#else
      float delta = 1.0 / frames;
 +#endif
@@ -2286,7 +2295,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-
 +        //LOGW("fadeIn: %d (%d) [%f]", fade_frames, frames, volume);
 +        if (fade_frames <= 0) {
 +          is_fade_in = false;
-+          //LOGW("fadeIn: Finished");
++          LOGW("fadeIn: Finished");
 +          /* and 'is_done' is to be 'true'. See below. */
 +        } else {
 +          frames = 0; /* to prevent from 'is_done' being 'true'. See below. */
@@ -2298,7 +2307,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-
      }  else if (is_fade_out) {
        fadeOut<T>(data, frames, channels, delta);
      }
-@@ -94,13 +131,23 @@
+@@ -94,13 +137,23 @@
      for (int j = 0; j < frames; j++) {
        for (int ch = 0; ch < channels; ch++) {
          data[j * channels + ch] = data[j * channels + ch] * volume;
@@ -2322,12 +2331,12 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-
      }
      is_fade_out = false;
      LOGI("faded out %d frames to volume %f",frames, volume);
-@@ -108,18 +155,33 @@
+@@ -108,18 +161,33 @@
  
    template <typename T>
    void fadeIn(T *data, int frames, int channels, float delta) {
-+#if 0
-+    LOGW("fade in %d frames from volume %f",frames, volume);
++#if 1
++    //LOGW("fade in %d frames from volume %f",frames, volume);
 +    //LOGW("data: %f -> %f", (float)data[0], (float)data[0] * volume);
 +#else
      LOGI("fade in %d frames from volume %f",frames, volume);
@@ -2356,7 +2365,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-
    }
  };
  
-@@ -267,6 +329,9 @@
+@@ -267,6 +335,9 @@
    void setAudioInfo(AudioInfo info) override {
      AudioStream::setAudioInfo(info);
      fade_last.setAudioInfo(info);
@@ -2366,7 +2375,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-
      active = true;
    }
  
-@@ -322,6 +387,7 @@
+@@ -322,6 +393,7 @@
    LastSampleFader fade_last;
    Print *p_out = nullptr;
    Stream *p_io = nullptr;
@@ -2374,7 +2383,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioTools/Fade.h arduino-audio-
    const char *error_msg = "setAudioInfo not called";
  };
  
-@@ -357,4 +423,4 @@
+@@ -357,4 +429,4 @@
    Fade fade;
  };
  
