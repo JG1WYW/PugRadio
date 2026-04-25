@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.55 (2026/03/26)"
+#define APP_VERSION "1.56 (2026/04/25)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -119,6 +119,13 @@ const char *urls[] = {
 
 
 #include <SPI.h>
+
+#include <ArduinoOTA.h>
+#include <WebServer.h>
+#include <Update.h>
+
+WebServer webserver(80);
+
 
 #ifdef USE_ETHER
 #include <EthernetESP32.h>
@@ -487,6 +494,9 @@ static char *passwd = "passwd", passwd_buf[PASSWD_BUF_SIZE];
 #define VOL_BUF_SIZE 32
 static char *vol = DEF_VOL, vol_buf[VOL_BUF_SIZE];
 
+#define OTA_BUF_SIZE 32
+static char *ota = "no", ota_buf[OTA_BUF_SIZE];
+
 #define IDX_BUF_SIZE 32
 #define DEF_IDX "0"
 static char *idx = DEF_IDX, idx_buf[IDX_BUF_SIZE];
@@ -508,6 +518,7 @@ void Serial_print_config()
     }
     Serial_printf("  INDEX: %s\r\n", idx);
     Serial_printf("  VOLUME: %s\r\n", vol);
+    Serial_printf("  OTA: %s\r\n", ota);
 
     Serial_printf("\r\n");
 }
@@ -567,6 +578,9 @@ void setup() {
   }
 
   vol = read_cfg("/volume.txt", vol_buf, VOL_BUF_SIZE, vol, 1, 0);
+
+  ota = read_cfg("/ota.txt", ota_buf, OTA_BUF_SIZE, ota, 1, 0);
+  SPIFFS.remove("/ota.txt");
 
 #if 1
   pinMode(0/*Boot button*/, INPUT_PULLUP);
@@ -716,6 +730,12 @@ void setup() {
       vol = DEF_VOL;
     }
 
+    Serial_printf("OTA (%s): ", ota);
+    ota = read_serial(ota_buf, OTA_BUF_SIZE, ota);
+    if (!strcmp("no", ota) and !strcmp("yes", ota)) {
+      ota = "no";
+    }
+
     Serial_printf("\r\n*** Results (to be new values) ***\r\n");
     Serial_print_config();
 
@@ -738,6 +758,7 @@ void setup() {
       }
       SPIFFS.remove("/index.txt");
       SPIFFS.remove("/volume.txt");
+      SPIFFS.remove("/ota.txt");
      } else {
       write_cfg("/bt.txt", bt);
       write_cfg("/pairing.txt", pairing);
@@ -754,6 +775,7 @@ void setup() {
       }
       write_cfg("/index.txt", idx);
       write_cfg("/volume.txt", vol);
+      //write_cfg("/ota.txt", ota);
      }
 
       //Serial_printf("SPIFFS was overwritten.\r\n");
@@ -764,6 +786,84 @@ void setup() {
    } while (!(answer[0] == 'y' || answer[0] == 'Y'));
 
     SPIFFS.end();
+
+#if 1
+    if (!strcmp(ota, "yes")) {
+      Serial_printf("Are you sure to update firmware? [y/N]: ");
+      answer = read_serial(answer_buf, ANSWER_BUF_SIZE, answer);
+      if (answer[0] == 'y' || answer[0] == 'Y') {
+          if (!strcmp(port, "eth") || !strcmp(port, "ETH")) {
+            Ethernet.init(driver);
+            Ethernet.begin();
+            Serial_printf("\r\n----------------------------------------\r\nPlease open http://%s/\r\n----------------------------------------\r\n\r\n", Ethernet.localIP().toString().c_str());
+          } else {
+            WiFi.begin(ssid, passwd);
+            while (WiFi.status() != WL_CONNECTED) {
+              delay(500);
+              Serial_printf(".");
+            }
+            Serial_printf(".\r\nWiFi connected.\r\n");
+            Serial_printf("\r\n----------------------------------------\r\nPlease open URL: http://%s/\r\n----------------------------------------\r\n\r\n", WiFi.localIP().toString().c_str());
+          }
+
+          ArduinoOTA.begin();
+
+          webserver.on("/", HTTP_GET, []() {
+              webserver.send(200, "text/html",
+                             "<html>"
+                             "<body>"
+                             "<hr>"
+                             "<h1>Welcome to PugRadio firmware update!</h1>"
+                             "<form method='POST' action='/update' enctype='multipart/form-data'>"
+                             "First, please select the firmware: <input type='file' name='update'><br>"
+                             "<p>"
+                             "After that, press <input type='submit' value='Update'> button, and Wait for the page to refresh!"
+                             "</form>"
+                             "<hr>"
+                             "</body>"
+                             "</html>");
+          });
+
+          webserver.on("/update", HTTP_POST, []() {
+              webserver.send(200, "text/html",
+                             "<html>"
+                             "<body>"
+                             "<hr>"
+                             "<h1>PugRadio Firmware Update Success!!</h1>"
+                             "<hr>"
+                             "</body>"
+                             "</html>");
+              delay(3000);
+              ESP.restart();
+          }, []() {
+              HTTPUpload& upload = webserver.upload();
+              if (upload.status == UPLOAD_FILE_START) {
+                  Serial_printf("Updating: %s...\r\n", upload.filename.c_str());
+                  if (!Update.begin()) {
+                      Update.printError(Serial);
+                  }
+              } else if (upload.status == UPLOAD_FILE_WRITE) {
+                  if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+                      Update.printError(Serial);
+                  }
+              } else if (upload.status == UPLOAD_FILE_END) {
+                  if (Update.end(true)) {
+                      Serial_printf("Update finished.\r\n");
+                  } else {
+                      Update.printError(Serial);
+                  }
+              }
+          });
+
+          webserver.begin();
+
+          for ( ; ; ) {
+            ArduinoOTA.handle();
+            webserver.handleClient();
+          }
+      }
+    }
+#endif
 
     Serial_printf("\r\n************************************************************************\r\n\r\n");
     Serial_printf("Restarting...\r\n");
@@ -912,6 +1012,9 @@ void setup() {
     }
     Serial.println(".");
     Serial.println("WiFi connected.");
+
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
   }
 #endif
 
