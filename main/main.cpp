@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.56 (2026/04/25)"
+#define APP_VERSION "1.57 (2026/05/06)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -497,6 +497,9 @@ static char *vol = DEF_VOL, vol_buf[VOL_BUF_SIZE];
 #define OTA_BUF_SIZE 32
 static char *ota = "no", ota_buf[OTA_BUF_SIZE];
 
+#define RESET_BUF_SIZE 32
+static char *reset = "no", reset_buf[RESET_BUF_SIZE];
+
 #define IDX_BUF_SIZE 32
 #define DEF_IDX "0"
 static char *idx = DEF_IDX, idx_buf[IDX_BUF_SIZE];
@@ -519,6 +522,7 @@ void Serial_print_config()
     Serial_printf("  INDEX: %s\r\n", idx);
     Serial_printf("  VOLUME: %s\r\n", vol);
     Serial_printf("  OTA: %s\r\n", ota);
+    Serial_printf("  RESET: %s\r\n", reset);
 
     Serial_printf("\r\n");
 }
@@ -580,7 +584,8 @@ void setup() {
   vol = read_cfg("/volume.txt", vol_buf, VOL_BUF_SIZE, vol, 1, 0);
 
   ota = read_cfg("/ota.txt", ota_buf, OTA_BUF_SIZE, ota, 1, 0);
-  SPIFFS.remove("/ota.txt");
+
+  reset = read_cfg("/reset.txt", reset_buf, RESET_BUF_SIZE, reset, 1, 0);
 
 #if 1
   pinMode(0/*Boot button*/, INPUT_PULLUP);
@@ -698,7 +703,7 @@ void setup() {
 //#ifndef USE_ETHER
     Serial_printf("PORT (%s) [wifi or eth]: ", port);
     port = read_serial(port_buf, PORT_BUF_SIZE, port);
-    if (!strcmp("wifi", port) and !strcmp("eth", port)) {
+    if (strcmp("wifi", port) && strcmp("eth", port)) {
       port = "wifi";
     }
 #endif
@@ -732,8 +737,14 @@ void setup() {
 
     Serial_printf("OTA (%s): ", ota);
     ota = read_serial(ota_buf, OTA_BUF_SIZE, ota);
-    if (!strcmp("no", ota) and !strcmp("yes", ota)) {
+    if (strcmp("no", ota) && strcmp("yes", ota)) {
       ota = "no";
+    }
+
+    Serial_printf("RESET (%s): ", reset);
+    reset = read_serial(reset_buf, RESET_BUF_SIZE, reset);
+    if (strcmp("no", reset) && strcmp("yes", reset)) {
+      reset = "no";
     }
 
     Serial_printf("\r\n*** Results (to be new values) ***\r\n");
@@ -742,7 +753,7 @@ void setup() {
     Serial_printf("Are you sure to overwrite settings? [y/N]: ");
     answer = read_serial(answer_buf, ANSWER_BUF_SIZE, answer);
     if (answer[0] == 'y' || answer[0] == 'Y') {
-     if (!strcmp(ssid, "reset")) {
+     if (!strcmp(reset, "yes")) {
       SPIFFS.remove("/bt.txt");
       SPIFFS.remove("/pairing.txt");
       SPIFFS.remove("/rssi.txt");
@@ -759,6 +770,10 @@ void setup() {
       SPIFFS.remove("/index.txt");
       SPIFFS.remove("/volume.txt");
       SPIFFS.remove("/ota.txt");
+      SPIFFS.remove("/reset.txt");
+
+      Serial_printf("\r\n*** Initialized.\r\n\r\n");
+
      } else {
       write_cfg("/bt.txt", bt);
       write_cfg("/pairing.txt", pairing);
@@ -776,7 +791,10 @@ void setup() {
       write_cfg("/index.txt", idx);
       write_cfg("/volume.txt", vol);
       //write_cfg("/ota.txt", ota);
+      //write_cfg("/reset.txt", reset);
      }
+
+      Serial_printf("\r\n*** Updated.\r\n\r\n");
 
       //Serial_printf("SPIFFS was overwritten.\r\n");
       break;
