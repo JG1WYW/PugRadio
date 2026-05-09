@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.58 (2026/05/06)"
+#define APP_VERSION "1.59 (2026/05/09)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -89,12 +89,21 @@ void Serial_write(int ch)
 
 const char *urls[] = {
 //char *urls[] = {
-  "https://wgbh-live.streamguys1.com/wgbh", // GBH 89.7 NPR (44.1kHz/16bit/stereo)
+  "https://pd.npr.org/anon.npr-mp3/npr/news/newscast.mp3", // NPR News and Talk (44.1kHz/16bit/stereo)
+
+  //"https://war.streamguys1.com:7031/kuaf1", // KUAF
+  //"https://vpr.streamguys1.com/vpr96.mp3", // Vermont Public
+  //"https://playerservices.streamtheworld.com/api/livestream-redirect/WGVUFM.mp3", // WGVU NPR
+  //"https://radio2.wqln.org:8443/", // WQLN NPR
+  //"https://wamu.cdnstream1.com/wamu.mp3", // WAMU 88.5 NPR (44.1kHz/16bit/stereo)
+
+  //"https://wgbh-live.streamguys1.com/wgbh", // GBH 89.7 NPR (44.1kHz/16bit/stereo)
 
   "https://war.streamguys1.com:7785/wuis.mp3", // NPR Illinois 91.9 UIS
   "https://whyy.streamguys1.com/whyy-mp3", // WHYY NPR
 
-  "https://npr-ice.streamguys1.com/live.mp3", // KRVS-HD3, WKCR-HD3, NPR News and Talk
+  //"https://npr-ice.streamguys1.com/live.mp3", // KRVS-HD3, WKCR-HD3, NPR News and Talk
+  "https://wpr-ice.streamguys1.com/wpr-ideas-mp3-64", // WISCONSIN PUBLIC RADIO (44.1kHz/16bit/mono)
 
   "https://streams.kqed.org/kqedradio", // KQED, 32kbps, mono
   "https://playerservices.streamtheworld.com/api/livestream-redirect/KVPRFM.mp3", // Valley Public Radio (KVPR)
@@ -103,8 +112,9 @@ const char *urls[] = {
 
   "https://utulsa.streamguys1.com/KWGSHD3.mp3", // KWGS HD3 BBC (44.1kHz/16bit/mono)
 
-  "https://streaming.live365.com/a77334", // Smooth Jazz Global Radio
+  //"https://streaming.live365.com/a77334", // Smooth Jazz Global Radio
 
+  "https://live.radioart.com/fLove_smooth_jazz.mp3", // Radio Art - Love Smooth Jazz
   "https://live.radioart.com/fSmooth_jazz.mp3", // Radio Art - Smooth Jazz
   "https://live.radioart.com/fSmooth_bossa_nova.mp3", // Radio Art - Smooth Bossa Nova
 
@@ -114,7 +124,8 @@ const char *urls[] = {
   "https://api.onlyhit.us/play",      // OnlyHit
   "https://gold.onlyhit.us/play",     // OnlyHit Gold
 
-  "https://wgbh-live.streamguys1.com/classical-hi/", // Classic, CRB 99.5
+  //"https://wgbh-live.streamguys1.com/classical-hi/", // Classic, CRB 99.5
+  "https://wtmd-ice.streamguys1.com/wypr-3-mp3", // WYPR PRESENTS ALL CLASSICAL
 };
 
 
