@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.59 (2026/05/09)"
+#define APP_VERSION "1.61 (2026/05/10)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -89,7 +89,8 @@ void Serial_write(int ch)
 
 const char *urls[] = {
 //char *urls[] = {
-  "https://pd.npr.org/anon.npr-mp3/npr/news/newscast.mp3", // NPR News and Talk (44.1kHz/16bit/stereo)
+  //"https://pd.npr.org/anon.npr-mp3/npr/news/newscast.mp3", // NPR News and Talk (44.1kHz/16bit/stereo)
+  "https://npr-ice.streamguys1.com/live.mp3", // KRVS-HD3, WKCR-HD3, NPR News and Talk (32kHz/16bit/stereo)
 
   //"https://war.streamguys1.com:7031/kuaf1", // KUAF
   //"https://vpr.streamguys1.com/vpr96.mp3", // Vermont Public
@@ -103,6 +104,7 @@ const char *urls[] = {
   "https://whyy.streamguys1.com/whyy-mp3", // WHYY NPR
 
   //"https://npr-ice.streamguys1.com/live.mp3", // KRVS-HD3, WKCR-HD3, NPR News and Talk
+
   "https://wpr-ice.streamguys1.com/wpr-ideas-mp3-64", // WISCONSIN PUBLIC RADIO (44.1kHz/16bit/mono)
 
   "https://streams.kqed.org/kqedradio", // KQED, 32kbps, mono
@@ -125,6 +127,7 @@ const char *urls[] = {
   "https://gold.onlyhit.us/play",     // OnlyHit Gold
 
   //"https://wgbh-live.streamguys1.com/classical-hi/", // Classic, CRB 99.5
+
   "https://wtmd-ice.streamguys1.com/wypr-3-mp3", // WYPR PRESENTS ALL CLASSICAL
 };
 

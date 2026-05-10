@@ -1132,7 +1132,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-05-09 00:42:56.269928900 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-05-10 19:13:27.389557900 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1434,7 +1434,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
  
  
-@@ -302,14 +494,95 @@
+@@ -302,14 +494,100 @@
              int32_t result_len = 0;
              A2DPConfig config = A2DPStream_self->config;
  
@@ -1500,6 +1500,11 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +#endif
                  result_len = a2dp_buffer.readArray((uint8_t*)data, len);
 +                //LOGW("a2dp: %d -> %d", len, result_len);   
++#if 1 /* 2026/05/10 trying to avoid WDT reboot */
++                if (result_len > 0) {
++                  delay(config.delay_ms);
++                }
++#endif
 +#if 1
 +                if (fade_count > 0 && result_len > 0) {
 +                  int16_t *data16 = (int16_t *)data;
