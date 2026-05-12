@@ -1132,7 +1132,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-05-10 19:13:27.389557900 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-05-12 23:52:15.917764900 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1445,7 +1445,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
              // at first call we start with some empty data
              if (is_a2dp_active){
                  // the data in the file must be in int16 with 2 channels 
-+#if 0 /* XXX disabling yield() */
++#if 1 /* enabling on 2026/5/12 XXX disabling yield() */
                  yield();
 +                //delay(1);
 +#endif
@@ -1500,7 +1500,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
 +#endif
                  result_len = a2dp_buffer.readArray((uint8_t*)data, len);
 +                //LOGW("a2dp: %d -> %d", len, result_len);   
-+#if 1 /* 2026/05/10 trying to avoid WDT reboot */
++#if 0 /* disabling on 2026/5/12 // 2026/05/10 trying to avoid WDT reboot */
 +                if (result_len > 0) {
 +                  delay(config.delay_ms);
 +                }
