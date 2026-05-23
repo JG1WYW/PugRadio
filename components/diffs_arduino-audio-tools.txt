@@ -1132,7 +1132,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-05-12 23:52:15.917764900 +0900
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-05-17 19:11:38.891643600 +0900
 @@ -16,14 +16,34 @@
  #include "Concurrency/BufferRTOS.h"
  
@@ -1445,7 +1445,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
              // at first call we start with some empty data
              if (is_a2dp_active){
                  // the data in the file must be in int16 with 2 channels 
-+#if 1 /* enabling on 2026/5/12 XXX disabling yield() */
++#if 0 /* enabling on 2026/5/12 XXX disabling yield() */
                  yield();
 +                //delay(1);
 +#endif
