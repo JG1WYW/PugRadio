@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.64 (2026/05/24)"
+#define APP_VERSION "1.65 (2026/05/24)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -806,9 +806,9 @@ void setup() {
       write_cfg("/volume.txt", vol);
       //write_cfg("/ota.txt", ota);
       //write_cfg("/reset.txt", reset);
-     }
 
       Serial_printf("\r\n*** Updated.\r\n\r\n");
+     }
 
       //Serial_printf("SPIFFS was overwritten.\r\n");
       break;
