@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.65 (2026/05/24)"
+#define APP_VERSION "1.66 (2026/07/12)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -262,6 +262,15 @@ W5500Driver driver(PIN_CS);
 #include "FS.h"
 #include "SPIFFS.h"
 
+#include "esp_mac.h"
+
+uint8_t macaddr_wifi[8];
+uint8_t macaddr_eth[8];
+uint8_t macaddr_bt[8];
+
+#define MACADDR_DIGITS(p)  p[0], p[1], p[2], p[3], p[4], p[5]
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+
 #if 0
 size_t availableMemory() {
   
@@ -285,6 +294,13 @@ size_t availableMemory() {
 }
 #endif
 
+void scramble_passwd(char *passwd, int passwd_len, char *macaddr)
+{
+  for (int i = 0 ; i < passwd_len ; i++) {
+    passwd[i] ^= macaddr[i % 6];
+  }
+}
+
 char *read_cfg(char *cfg_file, char *buf, int buf_len, char *default_value, int flag_print, int flag_url)
 {
   File fp = SPIFFS.open(cfg_file, FILE_READ);
@@ -307,6 +323,9 @@ char *read_cfg(char *cfg_file, char *buf, int buf_len, char *default_value, int 
         // ignore file when zero length
       } else {
         ptr = buf;
+        if (!flag_print) {
+          scramble_passwd(ptr, strlen(ptr), macaddr_wifi);
+        }
       }
     } else {
       //Serial_printf("empty file: [%s]\r\n", cfg_file);
@@ -339,6 +358,26 @@ int write_cfg(char *cfg_file, char *buf)
   int rv = -1;
 
   if (fp) {
+    rv = fp.write((uint8_t *)buf, strlen(buf));
+    rv = fp.write((uint8_t *)"\r\n", 2);
+    fp.close();
+  }
+
+  return rv;
+}
+
+int write_cfg_passwd(char *cfg_file, char *buf)
+{
+  File fp = SPIFFS.open(cfg_file, FILE_WRITE);
+  int rv = -1;
+
+  if (fp) {
+    char passwd[65];
+    strncpy(passwd, buf, MIN(64, strlen(buf)));
+    passwd[MIN(64, strlen(buf))] = 0x00;
+    scramble_passwd(passwd, strlen(passwd), macaddr_wifi);
+    buf = passwd;
+
     rv = fp.write((uint8_t *)buf, strlen(buf));
     rv = fp.write((uint8_t *)"\r\n", 2);
     fp.close();
@@ -423,7 +462,7 @@ void SysProvEvent(arduino_event_t *sys_event)
       Serial.println("*****");
 
       write_cfg("/ssid.txt", sys_event->event_info.prov_cred_recv.ssid);
-      write_cfg("/passwd.txt", sys_event->event_info.prov_cred_recv.password);
+      write_cfg_passwd("/passwd.txt", sys_event->event_info.prov_cred_recv.password);
 
       //Serial.println("\nRestarting...");
       //ESP.restart();
@@ -540,14 +579,6 @@ void Serial_print_config()
 
     Serial_printf("\r\n");
 }
-
-#include "esp_mac.h"
-
-uint8_t macaddr_wifi[8];
-uint8_t macaddr_eth[8];
-uint8_t macaddr_bt[8];
-
-#define MACADDR_DIGITS(p)  p[0], p[1], p[2], p[3], p[4], p[5]
 
 void setup() {
   Serial.begin(115200);
@@ -795,7 +826,7 @@ void setup() {
 //#ifndef USE_ETHER
       write_cfg("/port.txt", port);
       write_cfg("/ssid.txt", ssid);
-      write_cfg("/passwd.txt", passwd);
+      write_cfg_passwd("/passwd.txt", passwd);
 //#endif /* !USE_ETHER */
       for (int i = 0 ; i < URL_NUM ; i++) {
         char buf[PATH_BUF_SIZE];
