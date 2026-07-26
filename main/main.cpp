@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.66 (2026/07/12)"
+#define APP_VERSION "1.67 (2026/07/26)"
 
 /*
  * Copied the following part from morse-shield_nrt.ino (2024/05/18)
@@ -126,7 +126,8 @@ int runner_retry = 0;
 int runnerDurationDot = 60;
 int runner_count = 0;
 #define MAX_RUNNER_ACCEL 20
-#define HIGH_RUNNER_ACCEL 10
+int runner_clear_count = 10;
+#define HIGH_RUNNER_ACCEL runner_clear_count
 #endif
 
 #if defined(OPT_RUNNER) || defined(OPT_INVADER_SOUND)
@@ -1299,6 +1300,8 @@ void clearPresetMessage();
 
 #ifdef OPT_PUG_MORSE
 
+int noiseFlag = 1;
+int push_button = HIGH;
 int tone_active = 0;
 
 #endif
@@ -2310,6 +2313,18 @@ void readPaddleValue() {
       if (lastPaddle != L) {
         durationMark = !paddleRvs ? durationDot : durationDot * wait;
         lastPaddle = L;
+#if 1 /* PUG_MORSE */
+        if (push_button == LOW) {
+          if (!paddleRvs) {
+            if (Wpm < MAX_WPM)
+                Wpm++;
+          } else {
+            if (Wpm > MIN_WPM)
+                Wpm--;
+          }
+          setNewWpm(Wpm);
+        }
+#endif
 #ifdef OPT_TWO_TONE
 	if (twoTone) {
 	  if (!paddleRvs)
@@ -2324,6 +2339,18 @@ void readPaddleValue() {
       } else {
         durationMark = !paddleRvs ? durationDot * wait : durationDot;
         lastPaddle = R;
+#if 1 /* PUG_MORSE */
+        if (push_button == LOW) {
+          if (paddleRvs) {
+            if (Wpm < MAX_WPM)
+                Wpm++;
+          } else {
+            if (Wpm > MIN_WPM)
+                Wpm--;
+          }
+          setNewWpm(Wpm);
+        }
+#endif
 #ifdef OPT_TWO_TONE
 	if (twoTone) {
 	  if (!paddleRvs)
@@ -2371,6 +2398,18 @@ void readPaddleValue() {
         durationMark = 10000; // key down straight key
       } else {
         durationMark = !paddleRvs ? durationDot : durationDot * wait;
+#if 1 /* PUG_MORSE */
+        if (push_button == LOW) {
+          if (!paddleRvs) {
+            if (Wpm < MAX_WPM)
+                Wpm++;
+          } else {
+            if (Wpm > MIN_WPM)
+                Wpm--;
+          }
+          setNewWpm(Wpm);
+        }
+#endif
 #ifdef OPT_TWO_TONE
 	if (twoTone) {
 	  if (!paddleRvs)
@@ -2422,6 +2461,18 @@ void readPaddleValue() {
     //Serial.printf("Debug(3)\r\n");
     if (durationMark == 0 && keyerType != keyStraight) {
       durationMark = !paddleRvs ? durationDot * wait : durationDot;
+#if 1 /* PUG_MORSE */
+        if (push_button == LOW) {
+          if (paddleRvs) {
+            if (Wpm < MAX_WPM)
+                Wpm++;
+          } else {
+            if (Wpm > MIN_WPM)
+                Wpm--;
+          }
+          setNewWpm(Wpm);
+        }
+#endif
       lastPaddle = R;
       memory = -1;
 #ifdef OPT_BETTER_IAMBIC_A
@@ -3246,13 +3297,19 @@ void decode() {
 		  presetMessage[idx] = runner_call[idx];
 		}
                 runner_retry++;
+                // HARD class
                 // retrying 2 attempts (total 3 calls) are allowed.
                 // 3rd retry (total 4th attempts) becomes 1 penalty,
                 // and runner_accel will be immediately decreaased (slowed).
 		if (runner_retry > 2 && runner_accel > 0) {
+#if 1
+                  if (runner_type == RUNNER_TYPE_HARD) {
+#endif
 		   runner_accel--; // '?' becomes 5% slower
-		   //runner_miss++;
 		   runner_retry = 0;
+#if 1
+                  }
+#endif
 		}
                 accel_durationDot(); // accelerated speed for callsigns
 		runner_ptr = 0;
@@ -3260,17 +3317,9 @@ void decode() {
 		//printascii(SPACE);
               } else if (CharAbc[i] == runner_call[runner_ptr]) {
 	        if (++runner_ptr == runner_call_len) {
-		  //if (runner_miss == 0) {
-                  // 1 miss is allowed.
-		  if (runner_miss < 2) {
-		    if (runner_accel < MAX_RUNNER_ACCEL) {
-                      runner_accel++; // no miss becomes 5% faster
-		    }
-		  } else {
-		    if (runner_accel > 0) {
-		      runner_accel--; // miss(es) becomes 5% slower
-		    }
-		  }
+                  // increment runner_accel every after 1-QSO
+                  // if there were misses and retries, they have already decreased runner_accel at this moment.
+                  runner_accel++;
 
                   runner_count++;
                   if (runner_accel >= HIGH_RUNNER_ACCEL) {
@@ -3293,6 +3342,17 @@ void decode() {
 	        //tone_miss();
 		runner_beep = RUNNER_MISS;
 		runner_miss++;
+#if 1
+                // HARD and NORMAL class
+                // 3-miss becomes penalty.
+                // Up to 2 miss is allowed.
+                if (runner_type != RUNNER_TYPE_EASY) {
+                  if (runner_miss > 2 && runner_accel > 0) {
+                    runner_accel--; // miss(es) becomes 5% slower
+                    runner_miss = 0;
+                  }
+                }
+#endif
 		runner_ptr = 0;
 		printascii(SPACE);
 	      }
@@ -3351,6 +3411,17 @@ void decode() {
         //tone_miss();
 	runner_beep = RUNNER_MISS;
 	runner_miss++;
+#if 1
+        // HARD and NORMAL class
+        // 3-miss becomes penalty.
+        // Up to 2 miss is allowed.
+        if (runner_type != RUNNER_TYPE_EASY) {
+          if (runner_miss > 2 && runner_accel > 0) {
+            runner_accel--; // miss(es) becomes 5% slower
+            runner_miss = 0;
+          }
+        }
+#endif
 	runner_ptr = 0;
 	printascii('_');
       }
@@ -5056,6 +5127,30 @@ void processEndCallback(URLStream& stream, HttpRequest& request, Url& url)
 }
 #endif
 
+#if 1
+const static char *def_yes = "yes";
+const static char *def_no  = "no";
+const static char *def_0   = "0";
+const static char *def_1   = "1";
+const static char *def_2   = "2";
+const static char *def_3   = "3";
+const static char *def_20  = "20";
+const static char *def_50  = "50";
+const static char *def_150 = "150";
+
+#define DEF_YES   def_yes
+#define DEF_NO    def_no
+#define DEF_0     def_0
+#define DEF_1     def_1
+#define DEF_2     def_2
+#define DEF_3     def_3
+#define DEF_20    def_20
+#define DEF_50    def_50
+#define DEF_150   def_150
+#endif
+
+#if 0
+
 #define BT_BUF_SIZE 32
 //#define BT_BUF_SIZE 128
 static char *bt = "any", bt_buf[BT_BUF_SIZE];
@@ -5073,6 +5168,8 @@ static char *rssi = DEF_RSSI, rssi_buf[RSSI_BUF_SIZE];
 #define URL_NUM (sizeof(urls) / sizeof(char *))
 static char *urlp[URL_NUM], url_buf[URL_NUM][URL_BUF_SIZE];
 
+#endif /* 0 */
+
 #define PORT_BUF_SIZE 32
 #if 0 /*def BT_WIFI_ETHER*/ /* default "wifi" even with Ether */
 static char *port = "eth", port_buf[PORT_BUF_SIZE];
@@ -5086,8 +5183,55 @@ static char *ssid = "ssid", ssid_buf[SSID_BUF_SIZE];
 #define PASSWD_BUF_SIZE 64
 static char *passwd = "passwd", passwd_buf[PASSWD_BUF_SIZE];
 
+#if 0
 #define VOL_BUF_SIZE 32
 static char *vol = DEF_VOL, vol_buf[VOL_BUF_SIZE];
+#endif
+
+#if 1 /* PUG_MORSE */
+
+#define ADJ_WPM_BUF_SIZE 32
+#define ADJ_WPM_DEF DEF_20
+static char *adj_wpm = ADJ_WPM_DEF, adj_wpm_buf[ADJ_WPM_BUF_SIZE];
+
+#define REVERSE_BUF_SIZE 32
+#define REVERSE_DEF DEF_NO
+static char *reverse = REVERSE_DEF, reverse_buf[REVERSE_BUF_SIZE];
+
+#define KEYER_IAMBICA  "IambicA"
+#define KEYER_IAMBICB  "IambicB"
+#define KEYER_SUPER    "Super"
+#define KEYER_STRAIGHT "Straight"
+
+#define KEYER_BUF_SIZE 32
+#define KEYER_DEF DEF_0
+static char *keyer = KEYER_DEF, keyer_buf[KEYER_BUF_SIZE];
+
+#define OFFDELAY_BUF_SIZE 32
+#define OFFDELAY_DEF DEF_YES
+static char *offdelay = OFFDELAY_DEF, offdelay_buf[OFFDELAY_BUF_SIZE];
+
+#define DOT_RATIO_BUF_SIZE 32
+#define DOT_RATIO_DEF DEF_50
+static char *dot_ratio = DOT_RATIO_DEF, dot_ratio_buf[DOT_RATIO_BUF_SIZE];
+
+#define DASH_RATIO_BUF_SIZE 32
+#define DASH_RATIO_DEF DEF_150
+static char *dash_ratio = DASH_RATIO_DEF, dash_ratio_buf[DASH_RATIO_BUF_SIZE];
+
+#define NOISE_BUF_SIZE 32
+#define NOISE_DEF DEF_YES
+static char *noise = NOISE_DEF, noise_buf[NOISE_BUF_SIZE];
+
+#define AUTOKEYER_FLAG_BUF_SIZE 32
+#define AUTOKEYER_FLAG_DEF DEF_NO
+static char *autokeyer_flag = AUTOKEYER_FLAG_DEF, autokeyer_flag_buf[AUTOKEYER_FLAG_BUF_SIZE];
+
+#define AUTOKEYER_TYPE_BUF_SIZE 32
+#define AUTOKEYER_TYPE_DEF DEF_0
+static char *autokeyer_type = AUTOKEYER_TYPE_DEF, autokeyer_type_buf[AUTOKEYER_TYPE_BUF_SIZE];
+
+#endif /* 1 */
 
 #define OTA_BUF_SIZE 32
 static char *ota = "no", ota_buf[OTA_BUF_SIZE];
@@ -5095,9 +5239,11 @@ static char *ota = "no", ota_buf[OTA_BUF_SIZE];
 #define RESET_BUF_SIZE 32
 static char *reset = "no", reset_buf[RESET_BUF_SIZE];
 
+#if 0
 #define IDX_BUF_SIZE 32
 #define DEF_IDX "0"
 static char *idx = DEF_IDX, idx_buf[IDX_BUF_SIZE];
+#endif
 
 static int playing_idx = 0;
 
@@ -5120,10 +5266,47 @@ void Serial_print_config()
     Serial_printf("  INDEX: %s\r\n", idx);
     Serial_printf("  VOLUME: %s\r\n", vol);
 #endif
+#if 1 /* PUG_MORSE */
+    Serial_printf("  Adjusted WPM: %s\r\n", adj_wpm);
+    Serial_printf("  Reverse flag: %s\r\n", reverse);
+    Serial_printf("  Keyer type: %s (0:Iambic A, 1:Iambic B, 2:Super keyer, 3:Straight key)\r\n", keyer);
+    Serial_printf("  Off-delay flag: %s\r\n", offdelay);
+    Serial_printf("  Off-delay Dot Ratio: %s\r\n", dot_ratio);
+    Serial_printf("  Off-delay Dash Ratio: %s\r\n", dash_ratio);
+    Serial_printf("  Background Noise flag: %s\r\n", noise);
+    Serial_printf("  Auto Keyer flag: %s\r\n", autokeyer_flag);
+    Serial_printf("  Auto Keyer type: %s  (0:Iambic A, 1:Iambic B, 2:Super keyer)\r\n", autokeyer_type);
+#endif
     Serial_printf("  OTA: %s\r\n", ota);
     Serial_printf("  RESET: %s\r\n", reset);
 
     Serial_printf("\r\n");
+}
+
+void Serial_print_usage()
+{
+  Serial.printf("\r\n");
+  Serial.printf("*** Welcome to Pug Morse!! Ver. %s\r\n", APP_VERSION);
+  Serial.printf("\r\n");
+  Serial.printf("Short Press (Button count):\r\n");
+  Serial.printf("  1: 10-QSO Challenge (NORMAL class, %dWPM, 3-miss becomes 1-penalty)\r\n", Wpm);
+  Serial.printf("  2: Stop game\r\n");
+  Serial.printf("\r\n");
+  Serial.printf("  3: 1-QSO Challenge (EASY class, 15WPM)\r\n");
+  Serial.printf("  4: 10-QSO Challenge (HARD calss, 25WPM, 3-miss & 3-'?' becomes 1-penalty)\r\n");
+  Serial.printf("\r\n");
+  Serial.printf("  5: (RV) Toggle Reverse flag\r\n");
+  Serial.printf("  6: (KY) Toggle Keyer Type (Iambic A, Iambic B, Super keyer, Straight)\r\n");
+  Serial.printf("  7: (OD) Toggle Off-Delay flag\r\n");
+  Serial.printf("  8: (BN) Toggle Background Noise flag\r\n");
+  Serial.printf("  9: (AK) Toggle Auto Keyer detection flag\r\n");
+  Serial.printf(" 10: (AT) Toggle Auto Keyer Type (Iambic A, Iambic B, Super keyer)\r\n");
+  Serial.printf("\r\n");
+  Serial.printf("Long Press (Button count):\r\n");
+  Serial.printf("  1: WPM adjustment during 1 long press (3sec)\r\n");
+  Serial.printf("  2: Menu and Status after 1 short press plus 1 long press (3sec)\r\n");
+
+  Serial.printf("\r\n");
 }
 
 unsigned int sizeSpiffsFile(char *filename)
@@ -5180,14 +5363,17 @@ void setup() {
 
   SPIFFS.begin(true);
 
+#if 0
   bt = read_cfg("/bt.txt", bt_buf, BT_BUF_SIZE, bt, 1, 0);
   pairing = read_cfg("/pairing.txt", pairing_buf, PAIRING_BUF_SIZE, pairing, 1, 0);
   rssi = read_cfg("/rssi.txt", rssi_buf, RSSI_BUF_SIZE, rssi, 1, 0);
+#endif
   port = read_cfg("/port.txt", port_buf, PORT_BUF_SIZE, port, 1, 0);
 
   ssid = read_cfg("/ssid.txt", ssid_buf, SSID_BUF_SIZE, ssid, 1, 0);
   passwd = read_cfg("/passwd.txt", passwd_buf, PASSWD_BUF_SIZE, passwd, 0, 0);
 
+#if 0
   for (int i = 0 ; i < URL_NUM ; i++) {
     urlp[i] = (char *)urls[i];
 #define PATH_BUF_SIZE 32
@@ -5202,10 +5388,25 @@ void setup() {
   }
 
   vol = read_cfg("/volume.txt", vol_buf, VOL_BUF_SIZE, vol, 1, 0);
+#endif
 
+#if 1 /* PUG_MORSE */
+  adj_wpm = read_cfg("/adj_wpm.txt", adj_wpm_buf, ADJ_WPM_BUF_SIZE, adj_wpm, 1, 0);
+  reverse = read_cfg("/reverse.txt", reverse_buf, REVERSE_BUF_SIZE, reverse, 1, 0);
+  offdelay = read_cfg("/offdelay.txt", offdelay_buf, OFFDELAY_BUF_SIZE, offdelay, 1, 0);
+  dot_ratio = read_cfg("/dot_ratio.txt", dot_ratio_buf, DOT_RATIO_BUF_SIZE, dot_ratio, 1, 0);
+  dash_ratio = read_cfg("/dash_ratio.txt", dash_ratio_buf, DASH_RATIO_BUF_SIZE, dash_ratio, 1, 0);
+  keyer = read_cfg("/keyer.txt", keyer_buf, KEYER_BUF_SIZE, keyer, 1, 0);
+  noise = read_cfg("/noise.txt", noise_buf, NOISE_BUF_SIZE, noise, 1, 0);
+  autokeyer_flag = read_cfg("/autokeyer_flag.txt", autokeyer_flag_buf, AUTOKEYER_FLAG_BUF_SIZE, autokeyer_flag, 1, 0);
+  autokeyer_type = read_cfg("/autokeyer_type.txt", autokeyer_type_buf, AUTOKEYER_TYPE_BUF_SIZE, autokeyer_type, 1, 0);
+#endif
+
+#if 0
   ota = read_cfg("/ota.txt", ota_buf, OTA_BUF_SIZE, ota, 1, 0);
 
   reset = read_cfg("/reset.txt", reset_buf, RESET_BUF_SIZE, reset, 1, 0);
+#endif
 
 #if 1
   pinMode(0/*Boot button*/, INPUT_PULLUP);
@@ -5324,6 +5525,64 @@ void setup() {
     }
 #endif
 
+#if 1 /* PUG_RATIO */
+    Serial_printf("WPM (%s) [%d - %d]: ", adj_wpm, MIN_WPM, MAX_WPM);
+    adj_wpm = read_serial(adj_wpm_buf, ADJ_WPM_BUF_SIZE, adj_wpm);
+    if (adj_wpm[0] < '0' || adj_wpm[0] > '9' || atoi(adj_wpm) < MIN_WPM || atoi(adj_wpm) > MAX_WPM) {
+      adj_wpm = ADJ_WPM_DEF;
+    }
+
+    Serial_printf("Reverse flag (%s) [yes or no]: ", reverse);
+    reverse = read_serial(reverse_buf, REVERSE_BUF_SIZE, reverse);
+    if (strcmp("no", reverse) && strcmp("yes", reverse)) {
+      reverse = REVERSE_DEF;
+    }
+
+    Serial_printf("Keyer type (%s) [0:Iambic A, 1:Iambic B, 2:Super keyer, 3:Straight key]: ", keyer);
+    keyer = read_serial(keyer_buf, KEYER_BUF_SIZE, keyer);
+    if (keyer[0] < '0' || keyer[0] > '3' || atoi(keyer) < 0 || atoi(keyer) > 3) {
+      /* 0:Iambic A, 1:Iambic B, 2:Super keyer, 3:Straight key */
+      keyer = KEYER_DEF;
+    }
+
+    Serial_printf("Off-Delay flag (%s) [yes or no]: ", offdelay);
+    offdelay = read_serial(offdelay_buf, OFFDELAY_BUF_SIZE, offdelay);
+    if (strcmp("no", offdelay) && strcmp("yes", offdelay)) {
+      offdelay = OFFDELAY_DEF;
+    }
+
+    Serial_printf("Off-Delay Dot ratio (%s) [0-%d]: ", dot_ratio, MAX_DOT_RATIO);
+    dot_ratio = read_serial(dot_ratio_buf, DOT_RATIO_BUF_SIZE, dot_ratio);
+    if (dot_ratio[0] < '0' || dot_ratio[0] > '9' || atoi(dot_ratio) < 0 || atoi(dot_ratio) > MAX_DOT_RATIO) {
+      dot_ratio = DOT_RATIO_DEF;
+    }
+
+    Serial_printf("Off-Delay Dash ratio (%s) [0-%d]: ", dash_ratio, MAX_DASH_RATIO);
+    dash_ratio = read_serial(dash_ratio_buf, DASH_RATIO_BUF_SIZE, dash_ratio);
+    if (dash_ratio[0] < '0' || dash_ratio[0] > '9' || atoi(dash_ratio) < 0 || atoi(dash_ratio) > MAX_DASH_RATIO) {
+      dash_ratio = DASH_RATIO_DEF;
+    }
+
+    Serial_printf("Background Noise flag (%s) [yes or no]: ", noise);
+    noise = read_serial(noise_buf, NOISE_BUF_SIZE, noise);
+    if (strcmp("no", noise) && strcmp("yes", noise)) {
+      noise = NOISE_DEF;
+    }
+
+    Serial_printf("Autokey flag (%s) [yes or no]: ", autokeyer_flag);
+    autokeyer_flag = read_serial(autokeyer_flag_buf, AUTOKEYER_FLAG_BUF_SIZE, autokeyer_flag);
+    if (strcmp("no", autokeyer_flag) && strcmp("yes", autokeyer_flag)) {
+      autokeyer_flag = AUTOKEYER_FLAG_DEF;
+    }
+
+    Serial_printf("Autokeyer type (%s) [0:Iambic A, 1:Iambic B, 2:Super keyer]: ", autokeyer_type);
+    autokeyer_type = read_serial(autokeyer_type_buf, AUTOKEYER_TYPE_BUF_SIZE, autokeyer_type);
+    if (autokeyer_type[0] < '0' || autokeyer_type[0] > '2' || atoi(autokeyer_type) < 0 || atoi(autokeyer_type) > 2) {
+      /* 0:Iambic A, 1:Iambic B, 2:Super keyer (Straight key is not included) */
+      autokeyer_type = "0";
+    }
+#endif
+
     Serial_printf("OTA (%s): ", ota);
     ota = read_serial(ota_buf, OTA_BUF_SIZE, ota);
     if (strcmp("no", ota) && strcmp("yes", ota)) {
@@ -5343,14 +5602,17 @@ void setup() {
     answer = read_serial(answer_buf, ANSWER_BUF_SIZE, answer);
     if (answer[0] == 'y' || answer[0] == 'Y') {
      if (!strcmp(reset, "yes")) {
+#if 0
       SPIFFS.remove("/bt.txt");
       SPIFFS.remove("/pairing.txt");
       SPIFFS.remove("/rssi.txt");
+#endif
 //#ifndef USE_ETHER
       SPIFFS.remove("/port.txt");
       SPIFFS.remove("/ssid.txt");
       SPIFFS.remove("/passwd.txt");
 //#endif /* !USE_ETHER */
+#if 0
       for (int i = 0 ; i < URL_NUM ; i++) {
         char buf[PATH_BUF_SIZE];
         sprintf(buf, "/url%d.txt", i);
@@ -5358,20 +5620,37 @@ void setup() {
       }
       SPIFFS.remove("/index.txt");
       SPIFFS.remove("/volume.txt");
+#endif
+#if 1 /* PUG_MORSE */
+      SPIFFS.remove("/adj_wpm.txt");
+      SPIFFS.remove("/reverse.txt");
+      SPIFFS.remove("/keyer.txt");
+      SPIFFS.remove("/offdelay.txt");
+      SPIFFS.remove("/dot_ratio.txt");
+      SPIFFS.remove("/dash_ratio.txt");
+      SPIFFS.remove("/noise.txt");
+      SPIFFS.remove("/autokeyer_flag.txt");
+      SPIFFS.remove("/autokeyer_type.txt");
+#endif
+#if 0
       SPIFFS.remove("/ota.txt");
       SPIFFS.remove("/reset.txt");
+#endif
 
       Serial_printf("\r\n*** Initialized.\r\n\r\n");
 
      } else {
+#if 0
       write_cfg("/bt.txt", bt);
       write_cfg("/pairing.txt", pairing);
       write_cfg("/rssi.txt", rssi);
+#endif
 //#ifndef USE_ETHER
       write_cfg("/port.txt", port);
       write_cfg("/ssid.txt", ssid);
       write_cfg_passwd("/passwd.txt", passwd);
 //#endif /* !USE_ETHER */
+#if 0
       for (int i = 0 ; i < URL_NUM ; i++) {
         char buf[PATH_BUF_SIZE];
         sprintf(buf, "/url%d.txt", i);
@@ -5379,6 +5658,18 @@ void setup() {
       }
       write_cfg("/index.txt", idx);
       write_cfg("/volume.txt", vol);
+#endif
+#if 1 /* PUG_MORSE */
+      write_cfg("/adj_wpm.txt", adj_wpm);
+      write_cfg("/reverse.txt", reverse);
+      write_cfg("/keyer.txt", keyer);
+      write_cfg("/offdelay.txt", offdelay);
+      write_cfg("/dot_ratio.txt", dot_ratio);
+      write_cfg("/dash_ratio.txt", dash_ratio);
+      write_cfg("/noise.txt", noise);
+      write_cfg("/autokeyer_flag.txt", autokeyer_flag);
+      write_cfg("/autokeyer_type.txt", autokeyer_type);
+#endif
       //write_cfg("/ota.txt", ota);
       //write_cfg("/reset.txt", reset);
 
@@ -5486,7 +5777,7 @@ void setup() {
   Serial_printf("\r\n*** Configuration ***\r\n");
   Serial_print_config();
 
-#if 1
+#if 0
 //#define URL_BUF_SIZE 128
   for (int i = 0 ; i < URL_NUM ; i++) {
     ((char **)urls)[i] = urlp[i];
@@ -5497,11 +5788,47 @@ void setup() {
   SPIFFS.end();
 #endif
 
+#if 1 /* PUG_MORSE */
+  if (reverse[0] == 'y') {
+    paddleRvs = 1;
+  } else {
+    paddleRvs = 0;
+  }
+
+  if (offdelay[0] == 'y') {
+    offDelay = 1;
+  } else {
+    offDelay = 0;
+  }
+
+  off_timer_ratio_dot = atoi(dot_ratio);
+  off_timer_ratio_dash = atoi(dash_ratio);
+
+  keyerType = atoi(keyer);
+
+  if (noise[0] == 'y') {
+    noiseFlag = 1;
+  } else {
+    noiseFlag = 0;
+  }
+
+  if (autokeyer_flag[0] == 'y') {
+    autoKeyerType = 1;
+  } else {
+    autoKeyerType = 0;
+  }
+
+  autoKeyerTypeElekey = atoi(autokeyer_type);
+
+#endif
+
   int auto_reconnect = 0;
 
+#if 0
   if (pairing[0] == 'y') {
     auto_reconnect = 1;
   }
+#endif
 
   int use_wifi = 1;
 #ifdef USE_ETHER
@@ -5730,8 +6057,11 @@ void setup() {
   }
 #endif
 
-  setNewWpm(20);
+  //setNewWpm(20);
+  setNewWpm(atoi(adj_wpm));
   Serial.printf("Finishing setup\r\n\r\n");
+
+  Serial_print_usage();
 
 #if 1
   randomSeed(esp_random());
@@ -5765,8 +6095,12 @@ void setup() {
 #if 1
 //#define PUSH_TIMEOUT 500 /* msec */
 #define PUSH_TIMEOUT 1000 /* msec */
+#if 1
+#define LONG_PUSH_TIMEOUT 1000 /* msec */
+#endif
 int push_last_button = HIGH;
 unsigned long push_time = 0;
+int push_duration = 0;
 int push_time_over  = 0;
 int push_count = 0;
 
@@ -5782,7 +6116,11 @@ void push_button_reset()
 
 int push_button_check()
 {
+#if 0
   int push_button = digitalRead(0);
+#endif
+
+  push_button = digitalRead(0);
 
   if (push_button == LOW) {
     if (push_last_button == HIGH) {
@@ -5802,6 +6140,16 @@ int push_button_check()
     // button LOW -> HIGH
     push_last_button = HIGH;
 
+#if 1
+    push_duration = millis() - push_time;
+    if (push_duration > LONG_PUSH_TIMEOUT) {
+      // long button push
+      push_time = 0;
+
+      push_time_over = -1;
+    }
+#endif
+
     // button released
 
   } else if (/* here button released && */ push_time > 0 && millis() - push_time > PUSH_TIMEOUT) {
@@ -5811,8 +6159,12 @@ int push_button_check()
     push_time_over = 1;
   }
 
-  if (push_time_over)
+  if (push_time_over > 0)
     return push_count;
+#if 1
+  else if (push_time_over < 0)
+    return - push_count;
+#endif
   else
     return 0;
 }
@@ -5889,7 +6241,10 @@ void loop() {
       }
 #endif
 
-      float raw_noise = random(16384/2) * 2 - 16383/2;
+//      float raw_noise = random(16384/2) * 2 - 16383/2;
+      float raw_noise;
+     if (noiseFlag) {
+      raw_noise = random(16384/2) * 2 - 16383/2;
       //float raw_noise = random(16384) * 2 - 16383;
       //float raw_noise = random(16384*2) * 2 - 16383*2;
       //float raw_noise = random(16384*4) * 2 - 16383*4;
@@ -5954,6 +6309,9 @@ void loop() {
       raw_old2 = pink_state;
 
       data16[j+1] = data16[j] = (int16_t)noise * 10;
+     } else {
+      data16[j+1] = data16[j] = 0;
+     }
 
       if (tone_active) {
         data16[j+1] = data16[j] += generate_88sample_wma_square(tone_index++);
@@ -6041,6 +6399,7 @@ void loop() {
 
   int press_count = push_button_check();
   int flag_reverse = 0;
+  int idx = 0;
 
   extern int bt_prev_pushed, bt_next_pushed;
 
@@ -6054,7 +6413,8 @@ void loop() {
   }
 
   //if (press_count || !player.isActive()) {
-  if (press_count) {
+  if (press_count != 0) {
+#if 0
     if (press_count == 0 || press_count == 1) {
       // 0 means "player is not active"
 
@@ -6075,6 +6435,7 @@ void loop() {
       if (playing_idx >= URL_NUM)
         playing_idx = 0;
     }
+#endif
 
 #if 0
     if (press_count > 0) {
@@ -6085,39 +6446,181 @@ void loop() {
     }
 #endif
 
-    Serial.printf("\r\n\r\nPress count = %d\r\n", press_count);
+   if (press_count < 0) {
+    // press_count < 0
+    press_count = - press_count;
+    Serial.printf("\r\n\r\nLong Press count = %d\r\n", press_count);
 
     if (press_count > 0) {
-      //void tone_off(int dummyPin);
-      //void runner_stop();
+      tone_off(0);
+      runner_stop();
 
+      switch (press_count) {
+      default:
+      case 1:
+        /* WPM adjustment */
+        sprintf(adj_wpm_buf, "%d", Wpm);
+        adj_wpm = adj_wpm_buf;
+        write_cfg("/adj_wpm.txt", adj_wpm);
+
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = '0' + (Wpm / 10);
+        presetMessage[idx++] = '0' + (Wpm % 10);
+        presetMessage[idx++] = 'W';
+        presetMessage[idx++] = 'P';
+        presetMessage[idx++] = 'M';
+
+        break;
+
+      case 2:
+        /* Menu and Status */
+        Serial_print_usage();
+
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = 'R';
+        presetMessage[idx++] = 'V';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = '5';
+        presetMessage[idx++] = ' ';
+        if (paddleRvs) {
+          presetMessage[idx++] = 'C';
+        } else {
+          presetMessage[idx++] = 'N';
+        }
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = 'K';
+        presetMessage[idx++] = 'Y';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = '6';
+        presetMessage[idx++] = ' ';
+        switch (keyerType) {
+        default:
+        case 0:
+          keyer = DEF_0;
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'A';
+          break;
+        case 1:
+          keyer = DEF_1;
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'B';
+          break;
+        case 2:
+          keyer = DEF_2;
+          presetMessage[idx++] = 'S';
+          presetMessage[idx++] = 'P';
+          break;
+        case 3:
+          keyer = DEF_3;
+          presetMessage[idx++] = 'S';
+          presetMessage[idx++] = 'T';
+          break;
+        }
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = 'O';
+        presetMessage[idx++] = 'D';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = '7';
+        presetMessage[idx++] = ' ';
+        if (offDelay) {
+          presetMessage[idx++] = 'C';
+        } else {
+          presetMessage[idx++] = 'N';
+        }
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = 'B';
+        presetMessage[idx++] = 'N';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = '8';
+        presetMessage[idx++] = ' ';
+        if (noiseFlag) {
+          presetMessage[idx++] = 'C';
+        } else {
+          presetMessage[idx++] = 'N';
+        }
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = 'A';
+        presetMessage[idx++] = 'K';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = '9';
+        presetMessage[idx++] = ' ';
+        if (autoKeyerType) {
+          presetMessage[idx++] = 'C';
+        } else {
+          presetMessage[idx++] = 'N';
+        }
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = 'A';
+        presetMessage[idx++] = 'T';
+        presetMessage[idx++] = ' ';
+        presetMessage[idx++] = '1';
+        presetMessage[idx++] = '0';
+        presetMessage[idx++] = ' ';
+        switch (autoKeyerTypeElekey) {
+        default:
+        case 0:
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'A';
+          break;
+        case 1:
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'B';
+          break;
+        case 2:
+          presetMessage[idx++] = 'S';
+          presetMessage[idx++] = 'P';
+          break;
+        }
+
+        break;
+      }
+
+    }
+
+   } else {
+    // press_count >= 0
+    Serial.printf("\r\n\r\nShort Press count = %d\r\n", press_count);
+
+    if (press_count > 0) {
       tone_off(0);
       runner_stop();
 
       switch (press_count) {
       case 1:
-      case 2:
       case 3:
+      case 4:
         /*
          * Press 1 = Start 20WPM (medium class)
-         * Press 2 = Start 15WPM (light class)
-         * Press 3 = Start 25WPM (heavy class)
+         * Press 3 = Start 15WPM (light class)
+         * Press 4 = Start 25WPM (heavy class)
          */
         switch (press_count) {
         case 1:
           runner_type = RUNNER_TYPE_NORMAL;
-          setNewWpm(20);
-          Serial.printf("Starting Normal class game!!\r\n");
-          break;
-        case 2:
-          runner_type = RUNNER_TYPE_EASY;
-          setNewWpm(15);
-          Serial.printf("Starting Easy class game!!\r\n");
+          runner_clear_count = 10;
+          //setNewWpm(20);
+          setNewWpm(atoi(adj_wpm));
+          
+          Serial.printf("Starting 10-QSO Challenge!! (NORMAL class)\r\n");
           break;
         case 3:
+          runner_type = RUNNER_TYPE_EASY;
+          runner_clear_count = 1;
+          setNewWpm(15);
+          Serial.printf("Starting 1-QSO Challenge!! (EASY class)\r\n");
+          break;
+        case 4:
           runner_type = RUNNER_TYPE_HARD;
+          runner_clear_count = 10;
           setNewWpm(25);
-          Serial.printf("Starting Hard class game!!\r\n");
+          Serial.printf("Starting 10-QSO Challenge!! (HARD class)\r\n");
           break;
         }
 
@@ -6127,44 +6630,190 @@ void loop() {
 
         break;
 
-      case 4:
+      case 2:
       default:
-        /* just stop morse runner runner */
+        /* just stop morse runner */
         Serial.printf("Stopped.\r\n");
+
         break;
 
       case 5:
         /* reverse */
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = 'R';
+        presetMessage[idx++] = 'V';
+        presetMessage[idx++] = ' ';
+
         if (paddleRvs) {
           paddleRvs = 0;
+          reverse = "no";
+          presetMessage[idx++] = 'N';
         } else {
           paddleRvs = 1;
+          reverse = "yes";
+          presetMessage[idx++] = 'C';
         }
-        Serial.printf("Reverse flag = %d\r\n", paddleRvs);
+
+        Serial.printf("Reverse flag = %s (%d)\r\n", reverse, paddleRvs);
+
+        write_cfg("/reverse.txt", reverse);
+
         break;
 
       case 6:
-        /* off delay */
-        if (offDelay) {
-          offDelay = 0;
-        } else {
-          offDelay = 1;
+        /* keyer type */
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = 'K';
+        presetMessage[idx++] = 'Y';
+        presetMessage[idx++] = ' ';
+
+        keyerType++;
+        if (keyerType > keyStraight) { // 0:Iambic A, 1:Iambic B, 2:Super keyer, 3:Straight key
+          keyerType = 0;
         }
-        Serial.printf("Off Delay flag = %d\r\n", offDelay);
+
+        switch (keyerType) {
+        default:
+        case 0:
+          keyer = DEF_0;
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'A';
+          break;
+        case 1:
+          keyer = DEF_1;
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'B';
+          break;
+        case 2:
+          keyer = DEF_2;
+          presetMessage[idx++] = 'S';
+          presetMessage[idx++] = 'P';
+          break;
+        case 3:
+          keyer = DEF_3;
+          presetMessage[idx++] = 'S';
+          presetMessage[idx++] = 'T';
+          break;
+        }
+
+        Serial.printf("Keyer Type = %d (0:Iambic A, 1:Iambic B, 2:Super keyer)\r\n", keyerType);
+
+        write_cfg("/keyer.txt", keyer);
         break;
 
       case 7:
-        /* keyer type */
-        keyerType++;
-        if (keyerType > keySuper) {
-          keyerType = 0;
+        /* off-delay */
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = 'O';
+        presetMessage[idx++] = 'D';
+        presetMessage[idx++] = ' ';
+
+        if (offDelay) {
+          offDelay = 0;
+          offdelay = DEF_NO;
+          presetMessage[idx++] = 'N';
+        } else {
+          offDelay = 1;
+          offdelay = DEF_YES;
+          presetMessage[idx++] = 'C';
         }
-        Serial.printf("Keyer Type = %d (0:Iambic A, 1:Iambic B, 2:Super keyer)\r\n", keyerType);
+
+        Serial.printf("Off-Delay flag = %s (%d)\r\n", offdelay, offDelay);
+
+        write_cfg("/offdelay.txt", offdelay);
         break;
+
+      case 8:
+        /* noise */
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = 'B';
+        presetMessage[idx++] = 'N';
+        presetMessage[idx++] = ' ';
+
+        if (noiseFlag) {
+          noiseFlag = 0;
+          noise = DEF_NO;
+          presetMessage[idx++] = 'N';
+        } else {
+          noiseFlag = 1;
+          noise = DEF_YES;
+          presetMessage[idx++] = 'C';
+        }
+
+        Serial.printf("Background Noise flag = %s (%d)\r\n", noise, noiseFlag);
+
+        write_cfg("/noise.txt", noise);
+        break;
+
+      case 9:
+        /* Autokey flag */
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = 'A';
+        presetMessage[idx++] = 'K';
+        presetMessage[idx++] = ' ';
+
+        if (autoKeyerType) {
+          autoKeyerType = 0;
+          autokeyer_flag = DEF_NO;
+          presetMessage[idx++] = 'N';
+        } else {
+          autoKeyerType = 1;
+          autokeyer_flag = DEF_YES;
+          presetMessage[idx++] = 'C';
+        }
+
+        Serial.printf("Auto Keyer detection flag = %s (%d)\r\n", autokeyer_flag, autoKeyerType);
+
+        write_cfg("/autokeyer_flag.txt", autokeyer_flag);
+        break;
+
+      case 10:
+        /* Autokeyer type */
+        clearPresetMessage();
+        idx = 0;
+        presetMessage[idx++] = 'A';
+        presetMessage[idx++] = 'T';
+        presetMessage[idx++] = ' ';
+
+        autoKeyerTypeElekey++;
+        if (autoKeyerTypeElekey > keySuper) { // 0:Iambic A, 1:Iambic B, 2:Super keyer (keyStraight is not included)
+          autoKeyerTypeElekey = 0;
+        }
+
+        switch (autoKeyerTypeElekey) {
+        default:
+        case 0:
+          autokeyer_type = DEF_0;
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'A';
+          break;
+        case 1:
+          autokeyer_type = DEF_1;
+          presetMessage[idx++] = 'I';
+          presetMessage[idx++] = 'B';
+          break;
+        case 2:
+          autokeyer_type = DEF_2;
+          presetMessage[idx++] = 'S';
+          presetMessage[idx++] = 'P';
+          break;
+        }
+
+        Serial.printf("Auto Keyer Type = %d (0:Iambic A, 1:Iambic B, 2:Super keyer)\r\n", autoKeyerTypeElekey);
+
+        write_cfg("/autokeyer_type.txt", autokeyer_type);
+        break;
+
       }
 
       Serial.printf("\r\n");
     }
+   }
 
 #if 1
     push_button_reset();
