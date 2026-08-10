@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.66 (2026/07/12)"
+#define APP_VERSION "1.68 (2026/08/10)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -541,7 +541,7 @@ static char *port = "wifi", port_buf[PORT_BUF_SIZE];
 #define SSID_BUF_SIZE 32
 static char *ssid = "ssid", ssid_buf[SSID_BUF_SIZE];
 
-#define PASSWD_BUF_SIZE 32
+#define PASSWD_BUF_SIZE 64
 static char *passwd = "passwd", passwd_buf[PASSWD_BUF_SIZE];
 
 #define VOL_BUF_SIZE 32
@@ -628,9 +628,11 @@ void setup() {
 
   vol = read_cfg("/volume.txt", vol_buf, VOL_BUF_SIZE, vol, 1, 0);
 
+#if 0
   ota = read_cfg("/ota.txt", ota_buf, OTA_BUF_SIZE, ota, 1, 0);
 
   reset = read_cfg("/reset.txt", reset_buf, RESET_BUF_SIZE, reset, 1, 0);
+#endif
 
 #if 1
   pinMode(0/*Boot button*/, INPUT_PULLUP);
@@ -716,9 +718,9 @@ void setup() {
    do {
 
     Serial_printf("\r\n************************************************************************\r\n\r\n");
-    Serial.printf("  Welcome to Pug Radio!!\ " FEATURE " Ver. %s\r\n", APP_VERSION);
-    Serial.printf("  Wi-Fi MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_wifi));
-    Serial_printf("Setup mode. Please input values.\r\n");
+    Serial_printf("  Welcome to Pug Radio!!\ " FEATURE " Ver. %s\r\n", APP_VERSION);
+    Serial_printf("  Wi-Fi MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_wifi));
+    Serial_printf("\r\n  Setup mode. Please input values.\r\n");
     Serial_printf("\r\n************************************************************************\r\n\r\n");
 
 #ifdef BT_RADIO
@@ -814,8 +816,10 @@ void setup() {
       }
       SPIFFS.remove("/index.txt");
       SPIFFS.remove("/volume.txt");
+#if 0
       SPIFFS.remove("/ota.txt");
       SPIFFS.remove("/reset.txt");
+#endif
 
       Serial_printf("\r\n*** Initialized.\r\n\r\n");
 
