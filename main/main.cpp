@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.67 (2026/07/26)"
+#define APP_VERSION "1.68 (2026/08/10)"
 
 /*
  * Copied the following part from morse-shield_nrt.ino (2024/05/18)
@@ -5208,7 +5208,7 @@ static char *reverse = REVERSE_DEF, reverse_buf[REVERSE_BUF_SIZE];
 static char *keyer = KEYER_DEF, keyer_buf[KEYER_BUF_SIZE];
 
 #define OFFDELAY_BUF_SIZE 32
-#define OFFDELAY_DEF DEF_YES
+#define OFFDELAY_DEF DEF_NO
 static char *offdelay = OFFDELAY_DEF, offdelay_buf[OFFDELAY_BUF_SIZE];
 
 #define DOT_RATIO_BUF_SIZE 32
@@ -5457,9 +5457,9 @@ void setup() {
    do {
 
     Serial_printf("\r\n************************************************************************\r\n\r\n");
-    Serial.printf("  Welcome to Pug Morse!!\ " FEATURE " Ver. %s\r\n", APP_VERSION);
-    Serial.printf("  Wi-Fi MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_wifi));
-    Serial_printf("Setup mode. Please input values.\r\n");
+    Serial_printf("  Welcome to Pug Morse!!\ " FEATURE " Ver. %s\r\n", APP_VERSION);
+    Serial_printf("  Wi-Fi MAC address: %02x:%02x:%02x:%02x:%02x:%02x\r\n", MACADDR_DIGITS(macaddr_wifi));
+    Serial_printf("\r\n  Setup mode. Please input values.\r\n");
     Serial_printf("\r\n************************************************************************\r\n\r\n");
 
 #if 0
