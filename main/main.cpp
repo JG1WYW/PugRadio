@@ -5224,7 +5224,7 @@ static char *dash_ratio = DASH_RATIO_DEF, dash_ratio_buf[DASH_RATIO_BUF_SIZE];
 static char *noise = NOISE_DEF, noise_buf[NOISE_BUF_SIZE];
 
 #define AUTOKEYER_FLAG_BUF_SIZE 32
-#define AUTOKEYER_FLAG_DEF DEF_NO
+#define AUTOKEYER_FLAG_DEF DEF_YES
 static char *autokeyer_flag = AUTOKEYER_FLAG_DEF, autokeyer_flag_buf[AUTOKEYER_FLAG_BUF_SIZE];
 
 #define AUTOKEYER_TYPE_BUF_SIZE 32
