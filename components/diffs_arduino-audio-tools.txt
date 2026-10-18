@@ -265,7 +265,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioConfig.h arduino-audio-tool
  // #ifndef LED_BUILTIN
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpChunkReader.h arduino-audio-tools/src/AudioHttp/HttpChunkReader.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpChunkReader.h	2025-05-05 15:44:02.786858300 +0900
-+++ arduino-audio-tools/src/AudioHttp/HttpChunkReader.h	2026-05-06 06:59:36.474526900 +0900
++++ arduino-audio-tools/src/AudioHttp/HttpChunkReader.h	2026-10-14 23:17:57.268445500 +0900
 @@ -40,6 +40,11 @@
      // read the chunk data - but not more then available
      int read_max = len < open_chunk_len ? len : open_chunk_len;
@@ -278,19 +278,20 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpChunkReader.h ardu
      // update current unprocessed chunk
      open_chunk_len -= len_processed;
  
-@@ -60,6 +65,11 @@
+@@ -60,6 +65,12 @@
  
      int read_max = len < open_chunk_len ? len : open_chunk_len;
      int len_processed = readlnInternal(client, str, read_max, incl_nl);
 +#if 1 /* XXX */
 +    if (len_processed < 0) {
++      //LOGE("XXX len_processed: %d", len_processed);
 +      return len_processed;
 +    }
 +#endif
      open_chunk_len -= len_processed;
  
      // the chunks are terminated by a final CRLF
-@@ -103,7 +113,11 @@
+@@ -103,7 +114,11 @@
      LOGD("HttpChunkReader::readChunkLen");
      uint8_t len_str[51];
      readlnInternal(client, len_str, 50, false);
@@ -353,7 +354,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpHeader.h arduino-a
 +}  // namespace audio_tools
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h arduino-audio-tools/src/AudioHttp/HttpLineReader.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2025-05-05 15:44:02.794846600 +0900
-+++ arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2026-02-11 11:22:50.733180600 +0900
++++ arduino-audio-tools/src/AudioHttp/HttpLineReader.h	2026-10-14 22:57:36.254262500 +0900
 @@ -20,23 +20,46 @@
                               bool incl_nl = true) {
      int result = 0;
@@ -578,7 +579,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/HttpRequest.h arduino-
  };
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-audio-tools/src/AudioHttp/URLStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h	2025-05-18 16:08:27.755766900 +0900
-+++ arduino-audio-tools/src/AudioHttp/URLStream.h	2025-07-26 15:25:37.939847300 +0900
++++ arduino-audio-tools/src/AudioHttp/URLStream.h	2026-10-17 09:35:41.282574400 +0900
 @@ -48,6 +48,13 @@
    ~URLStream() {
      TRACED();
@@ -662,6 +663,15 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-au
    void setWaitForData(bool flag) { wait_for_data = flag; }
  
    int contentLength() { return size; }
+@@ -236,7 +272,7 @@
+         if (millis() > end) break;
+         // stop waiting if we got an error
+         if (request.reply().statusCode() >= 300) {
+-          LOGE("Error code recieved ... stop waiting for reply");
++          LOGE("Error code recieved ... stop waiting for reply: %d", request.reply().statusCode());
+           break;
+         }
+         delay(500);
 @@ -279,6 +315,10 @@
    unsigned long handshakeTimeout = URL_HANDSHAKE_TIMEOUT;  // 120000
    bool is_power_save = false;
@@ -711,12 +721,21 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-au
      return true;
    }
  
-@@ -334,35 +379,103 @@
+@@ -334,35 +379,121 @@
      // keep icy across redirect requests ?
      const char* icy = request.header().get("Icy-MetaData");
  
 +    LOGW("Opening: [%s]", url.url());
 +    LOGW("Mime: [%s]", reqMime);
++#if 1 /* 2026/10/14 */
++    Client* p_client = &getClient(url.isSecure());
++    if (p_client && p_client->connected()) {
++        LOGW("ALREADY CONNECTED");
++        p_client->stop();
++        //yield();
++        delay(500); // 500msec waiting for memory clean up inside FreeRTOS after stop()
++    }
++#endif
 +#if 0
 +    Client* p_client = &getClient(url.isSecure());
 +    if (p_client->connected()) {
@@ -773,6 +792,10 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-au
 +#else
 +        p_client->stop();
 +#endif
++#if 1 /* 2026/10/14 */
++        //yield();
++        delay(500); // 500msec waiting for memory clean up inside FreeRTOS after stop()
++#endif
          request.setClient(*p_client);
          if (icy) {
            request.header().put("Icy-MetaData", icy);
@@ -809,6 +832,11 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioHttp/URLStream.h arduino-au
        if (clientSecure == nullptr) {
          clientSecure = new WiFiClientSecure();
          clientSecure->setInsecure();
++#if 1
++        /* to avoid memory exhaustion probably due to Letsencrypt's swtich to Generation Y base intermediate certificate chain on Oct, 2026 */
++        //clientSecure->setBufferSizes(512,512);
++        //client.setMFLN(1024);
++#endif
 +#if 0
 +        clientSecure->setHandshakeTimeout(URL_HANDSHAKE_TIMEOUT / 1000); /* seconds */
 +#endif
@@ -1132,18 +1160,18 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioI2S/I2SESP32V1.h arduino-au
 +#endif
 diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-audio-tools/src/AudioLibs/A2DPStream.h
 --- ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h	2025-05-05 15:44:02.859434400 +0900
-+++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-05-17 19:11:38.891643600 +0900
-@@ -16,14 +16,34 @@
++++ arduino-audio-tools/src/AudioLibs/A2DPStream.h	2026-06-13 09:16:19.307707000 +0900
+@@ -15,6 +15,9 @@
+ #include "AudioTools/AudioStreams.h"
  #include "Concurrency/BufferRTOS.h"
- 
  
 +#if 1
 +extern int push_button_check();
 +#endif
-+
+ 
  namespace audio_tools {
  
- class A2DPStream;
+@@ -22,8 +25,24 @@
  static A2DPStream *A2DPStream_self=nullptr;
  // buffer which is used to exchange data
  static BufferRTOS<uint8_t>a2dp_buffer{0, A2DP_BUFFER_SIZE, portMAX_DELAY, portMAX_DELAY};
@@ -1168,7 +1196,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
  
  int32_t a2dp_stream_source_sound_data(Frame* data, int32_t len);
  void a2dp_stream_sink_sound_data(const uint8_t* data, uint32_t len);
-@@ -52,7 +72,11 @@
+@@ -52,7 +71,11 @@
          /// Delay in ms which is added to each write
          int delay_ms = 1;
          /// when a2dp source is active but has no data we generate silence data
@@ -1180,7 +1208,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
  };
  
  
-@@ -134,24 +158,56 @@
+@@ -134,24 +157,56 @@
              LOGI("Connecting to %s",cfg.name);
              a2dp_buffer.resize(cfg.buffer_size);
  
@@ -1237,7 +1265,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                      while(!a2dp_source->is_connected()){
                          LOGD("waiting for connection");
                          delay(1000);
-@@ -213,20 +269,49 @@
+@@ -213,20 +268,49 @@
  
          /// Writes the data into a temporary send buffer - where it can be picked up by the callback
          size_t write(const uint8_t* data, size_t len) override {   
@@ -1287,7 +1315,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
                  }
              }
  
-@@ -235,7 +320,16 @@
+@@ -235,7 +319,16 @@
              LOGD("write %d -> %d", len, result);
              if (config.mode == TX_MODE){
                  // give the callback a chance to retrieve the data
@@ -1305,7 +1333,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
              }
              return result;
          }
-@@ -247,8 +341,31 @@
+@@ -247,8 +340,31 @@
                  return 0;
              }
              LOGD("readBytes %d", len);
@@ -1337,7 +1365,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
              return result;
          }
         
-@@ -273,6 +390,51 @@
+@@ -273,6 +389,51 @@
              return true;
          }
  
@@ -1389,7 +1417,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
      protected:
          A2DPConfig config;
          BluetoothA2DPSource *a2dp_source = nullptr;
-@@ -284,7 +446,13 @@
+@@ -284,7 +445,13 @@
          static bool detected_device(const char* ssid, esp_bd_addr_t address, int rssi){
              LOGW("found Device: %s rssi: %d", ssid, rssi);
              //filter out weak signals
@@ -1403,7 +1431,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
      
          static void a2dp_state_callback(esp_a2d_connection_state_t state, void *caller){
-@@ -294,6 +462,30 @@
+@@ -294,6 +461,30 @@
                   is_a2dp_active = true;
              } 
              LOGW("==> state: %s", self->a2dp->to_str(state));
@@ -1434,7 +1462,7 @@ diff -ur ../../TMP_LIBS/arduino-audio-tools/src/AudioLibs/A2DPStream.h arduino-a
          }
  
  
-@@ -302,14 +494,100 @@
+@@ -302,14 +493,100 @@
              int32_t result_len = 0;
              A2DPConfig config = A2DPStream_self->config;
  

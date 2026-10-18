@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.68 (2026/08/10)"
+#define APP_VERSION "1.70 (2026/10/18)"
 
 #if 1 /* 1 if enabling Ethernet port */
 #define BT_WIFI_ETHER
@@ -120,11 +120,33 @@ const char *urls[] = {
   "https://live.radioart.com/fSmooth_jazz.mp3", // Radio Art - Smooth Jazz
   "https://live.radioart.com/fSmooth_bossa_nova.mp3", // Radio Art - Smooth Bossa Nova
 
-  "https://kpop.onlyhit.us/play",     // OnlyHit K-Pop
-  "https://j.onlyhit.us/play",        // OnlyHit Japan
-  "https://api.onlyhit.us/tophits",   // OnlyHit Top Hits
-  "https://api.onlyhit.us/play",      // OnlyHit
-  "https://gold.onlyhit.us/play",     // OnlyHit Gold
+  //https://live.radioart.com/fLove_smooth_jazz.mp3
+  //https://live.radioart.com/fSmooth_bossa_nova.mp3
+
+  //https://live.radioart.com/fSmooth_lounge.mp3
+  //https://live.radioart.com/fTokyo.mp3
+  //https://live.radioart.com/fSmooth_up_tempo.mp3
+  //https://live.radioart.com/fSmooth_vocal.mp3
+  //https://live.radioart.com/fMellow_smooth_jazz.mp3
+  //https://live.radioart.com/fVocal_new_age.mp3
+  //https://live.radioart.com/fVocal_chillout.mp3
+  //https://live.radioart.com/fVocal_jazz.mp3
+  //https://live.radioart.com/fVocal_lounge.mp3
+  //https://live.radioart.com/fVocal_legends.mp3
+  //https://live.radioart.com/fContemporary_vocal.mp3
+  //https://live.radioart.com/fStress_relief.mp3
+
+  "https://live.radioart.com/fSmooth_lounge.mp3",
+  "https://live.radioart.com/fSmooth_up_tempo.mp3",
+  "https://live.radioart.com/fVocal_chillout.mp3",
+  "https://live.radioart.com/fVocal_legends.mp3",
+  "https://live.radioart.com/fStress_relief.mp3",
+
+  //"https://kpop.onlyhit.us/play",     // OnlyHit K-Pop
+  //"https://j.onlyhit.us/play",        // OnlyHit Japan
+  //"https://api.onlyhit.us/tophits",   // OnlyHit Top Hits
+  //"https://api.onlyhit.us/play",      // OnlyHit
+  //"https://gold.onlyhit.us/play",     // OnlyHit Gold
 
   //"https://wgbh-live.streamguys1.com/classical-hi/", // Classic, CRB 99.5
 
@@ -581,6 +603,8 @@ void Serial_print_config()
 }
 
 void setup() {
+  //mbedtls_platform_set_calloc_free(ps_calloc, free);
+
   Serial.begin(115200);
 
   esp_read_mac(macaddr_wifi, ESP_MAC_WIFI_STA);
