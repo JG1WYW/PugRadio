@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.68 (2026/08/10)"
+#define APP_VERSION "1.70 (2026/10/28)"
 
 /*
  * Copied the following part from morse-shield_nrt.ino (2024/05/18)
@@ -3321,6 +3321,18 @@ void decode() {
                   // if there were misses and retries, they have already decreased runner_accel at this moment.
                   runner_accel++;
 
+#if 1
+                  // HARD and NORMAL class
+                  // 3-miss becomes penalty.
+                  // Up to 2 miss is allowed.
+                  if (runner_type != RUNNER_TYPE_EASY) {
+                    if (runner_miss > 2 && runner_accel > 0) {
+                      runner_accel--; // miss(es) becomes 5% slower
+                      runner_miss = 0;
+                    }
+                  }
+#endif
+
                   runner_count++;
                   if (runner_accel >= HIGH_RUNNER_ACCEL) {
                     tone_invader_clear();
@@ -3342,7 +3354,7 @@ void decode() {
 	        //tone_miss();
 		runner_beep = RUNNER_MISS;
 		runner_miss++;
-#if 1
+#if 0
                 // HARD and NORMAL class
                 // 3-miss becomes penalty.
                 // Up to 2 miss is allowed.
@@ -3411,7 +3423,7 @@ void decode() {
         //tone_miss();
 	runner_beep = RUNNER_MISS;
 	runner_miss++;
-#if 1
+#if 0
         // HARD and NORMAL class
         // 3-miss becomes penalty.
         // Up to 2 miss is allowed.
@@ -6624,6 +6636,8 @@ void loop() {
           break;
         }
 
+        runner_count = 0;
+
         effect_dat = snd_start_dat;
         effect_len = snd_start_len;
         effect_active = EFFECT_START;
@@ -6698,7 +6712,7 @@ void loop() {
           break;
         }
 
-        Serial.printf("Keyer Type = %d (0:Iambic A, 1:Iambic B, 2:Super keyer)\r\n", keyerType);
+        Serial.printf("Keyer Type = %d (0:Iambic A, 1:Iambic B, 2:Super keyer, 3:Straight key)\r\n", keyerType);
 
         write_cfg("/keyer.txt", keyer);
         break;
