@@ -11,7 +11,7 @@
  *   https://github.com/Networking-for-Arduino/EthernetESP32
  */
 
-#define APP_VERSION "1.70 (2026/10/28)"
+#define APP_VERSION "1.71 (2026/10/31)"
 
 /*
  * Copied the following part from morse-shield_nrt.ino (2024/05/18)
@@ -63,7 +63,7 @@ String mod_date = "24/05/01";
 //#define OPT_LOOK_AHEAD_MEMORY           /* look ahead memory */
 //#define OPT_TWO_TONE                    /* two tone for marking the trailing dot */
 //#define OPT_ESP32                       /* ESP32 instead of Arduino Uno */
-//#define OPT_AVOID_CHATTERING            /* indend to avoid chattering */
+#define OPT_AVOID_CHATTERING            /* indend to avoid chattering */
 //#define OPT_AVOID_CHATTERING_WATCH      /* indend to avoid chattering */
 #define OPT_AUTO_KEYERTYPE              /* adapt to paddle/straight change */
 #define OPT_INVADER_SOUND		/* invader sound */
@@ -1798,8 +1798,8 @@ int paddleL_trans = 0;
 int paddleR_trans = 0;
 
 //#define AVG_THRESHOLD 0.25
-#define AVG_THRESHOLD 0.125
-//#define AVG_THRESHOLD 0.5
+//#define AVG_THRESHOLD 0.125
+#define AVG_THRESHOLD 0.5
 
 float paddleL_avg = 0;
 float paddleR_avg = 0;
@@ -5146,6 +5146,7 @@ const static char *def_0   = "0";
 const static char *def_1   = "1";
 const static char *def_2   = "2";
 const static char *def_3   = "3";
+const static char *def_10  = "10";
 const static char *def_20  = "20";
 const static char *def_50  = "50";
 const static char *def_150 = "150";
@@ -5156,6 +5157,7 @@ const static char *def_150 = "150";
 #define DEF_1     def_1
 #define DEF_2     def_2
 #define DEF_3     def_3
+#define DEF_10    def_10
 #define DEF_20    def_20
 #define DEF_50    def_50
 #define DEF_150   def_150
@@ -5243,6 +5245,14 @@ static char *autokeyer_flag = AUTOKEYER_FLAG_DEF, autokeyer_flag_buf[AUTOKEYER_F
 #define AUTOKEYER_TYPE_DEF DEF_0
 static char *autokeyer_type = AUTOKEYER_TYPE_DEF, autokeyer_type_buf[AUTOKEYER_TYPE_BUF_SIZE];
 
+#define CHATTERING_FLAG_BUF_SIZE 32
+#define CHATTERING_FLAG_DEF DEF_YES
+static char *chattering_flag = CHATTERING_FLAG_DEF, chattering_flag_buf[CHATTERING_FLAG_BUF_SIZE];
+
+#define CHATTERING_COUNT_BUF_SIZE 32
+#define CHATTERING_COUNT_DEF DEF_10
+static char *chattering_count = CHATTERING_COUNT_DEF, chattering_count_buf[CHATTERING_COUNT_BUF_SIZE];
+
 #endif /* 1 */
 
 #define OTA_BUF_SIZE 32
@@ -5288,6 +5298,8 @@ void Serial_print_config()
     Serial_printf("  Background Noise flag: %s\r\n", noise);
     Serial_printf("  Auto Keyer flag: %s\r\n", autokeyer_flag);
     Serial_printf("  Auto Keyer type: %s  (0:Iambic A, 1:Iambic B, 2:Super keyer)\r\n", autokeyer_type);
+    Serial_printf("  Avoid Chattering flag: %s\r\n", chattering_flag);
+    Serial_printf("  Avoid Chattering count: %s\r\n", chattering_count);
 #endif
     Serial_printf("  OTA: %s\r\n", ota);
     Serial_printf("  RESET: %s\r\n", reset);
@@ -5412,6 +5424,8 @@ void setup() {
   noise = read_cfg("/noise.txt", noise_buf, NOISE_BUF_SIZE, noise, 1, 0);
   autokeyer_flag = read_cfg("/autokeyer_flag.txt", autokeyer_flag_buf, AUTOKEYER_FLAG_BUF_SIZE, autokeyer_flag, 1, 0);
   autokeyer_type = read_cfg("/autokeyer_type.txt", autokeyer_type_buf, AUTOKEYER_TYPE_BUF_SIZE, autokeyer_type, 1, 0);
+  chattering_flag = read_cfg("/chattering_flag.txt", chattering_flag_buf, CHATTERING_FLAG_BUF_SIZE, chattering_flag, 1, 0);
+  chattering_count = read_cfg("/chattering_count.txt", chattering_count_buf, CHATTERING_COUNT_BUF_SIZE, chattering_count, 1, 0);
 #endif
 
 #if 0
@@ -5593,6 +5607,18 @@ void setup() {
       /* 0:Iambic A, 1:Iambic B, 2:Super keyer (Straight key is not included) */
       autokeyer_type = "0";
     }
+
+    Serial_printf("Avoid Chattering flag (%s) [yes or no]: ", chattering_flag);
+    chattering_flag = read_serial(chattering_flag_buf, CHATTERING_FLAG_BUF_SIZE, chattering_flag);
+    if (strcmp("no", chattering_flag) && strcmp("yes", chattering_flag)) {
+      chattering_flag = CHATTERING_FLAG_DEF;
+    }
+
+    Serial_printf("Avoid Chattering count (%s) [0-%d]: ", chattering_count, MAX_CHATTERING_COUNT);
+    chattering_count = read_serial(chattering_count_buf, CHATTERING_COUNT_BUF_SIZE, chattering_count);
+    if (chattering_count[0] < '0' || chattering_count[0] > '9' || atoi(chattering_count) < 0 || atoi(chattering_count) > MAX_CHATTERING_COUNT) {
+      chattering_count = CHATTERING_COUNT_DEF;
+    }
 #endif
 
     Serial_printf("OTA (%s): ", ota);
@@ -5643,6 +5669,8 @@ void setup() {
       SPIFFS.remove("/noise.txt");
       SPIFFS.remove("/autokeyer_flag.txt");
       SPIFFS.remove("/autokeyer_type.txt");
+      SPIFFS.remove("/chattering_flag.txt");
+      SPIFFS.remove("/chattering_count.txt");
 #endif
 #if 0
       SPIFFS.remove("/ota.txt");
@@ -5681,6 +5709,8 @@ void setup() {
       write_cfg("/noise.txt", noise);
       write_cfg("/autokeyer_flag.txt", autokeyer_flag);
       write_cfg("/autokeyer_type.txt", autokeyer_type);
+      write_cfg("/chattering_flag.txt", chattering_flag);
+      write_cfg("/chattering_count.txt", chattering_count);
 #endif
       //write_cfg("/ota.txt", ota);
       //write_cfg("/reset.txt", reset);
@@ -5831,6 +5861,14 @@ void setup() {
   }
 
   autoKeyerTypeElekey = atoi(autokeyer_type);
+
+  if (chattering_flag[0] == 'y') {
+    avoidChattering = 1;
+  } else {
+    avoidChattering = 0;
+  }
+
+  avoidChatteringCount = atoi(chattering_count);
 
 #endif
 
@@ -6862,6 +6900,6 @@ void loop() {
 #if 1
   void loop_runner();
   loop_runner();
-  delay(1);
+  //delay(1);
 #endif
 }
